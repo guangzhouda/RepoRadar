@@ -28,8 +28,10 @@ def build_config_status() -> dict[str, object]:
         "version": __version__,
         "phase": "0-bootstrap",
         "github_token_configured": bool(settings.github_token),
-        "llm_key_configured": bool(settings.llm_api_key or settings.openai_api_key),
+        "llm_key_configured": bool(settings.llm_api_key),
         "llm_provider": settings.llm_provider,
+        "llm_base_url": settings.llm_base_url,
+        "llm_model": settings.llm_model,
         "cache_dir": settings.cache_dir,
         "log_level": settings.log_level,
     }

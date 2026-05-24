@@ -45,6 +45,7 @@ Copy-Item .env.example .env
 ```
 
 Edit `.env` and set credentials when you start implementing API-backed stages.
+RepoRadar reads `.env` automatically and lets real process environment variables override file values.
 
 ## Run
 
@@ -66,12 +67,21 @@ The project reads these variables from the process environment:
 - `GITHUB_SEARCH_PER_PAGE`
 - `LLM_PROVIDER`
 - `LLM_API_KEY`
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL`
+- `LLM_BASE_URL`
+- `LLM_MODEL`
 - `REPORADAR_CACHE_DIR`
 - `REPORADAR_LOG_LEVEL`
 
 Use `.env.example` as the source of truth for local configuration.
+
+DeepSeek example:
+
+```env
+LLM_PROVIDER=deepseek
+LLM_API_KEY=your_deepseek_api_key
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-v4-pro
+```
 
 ## Project Layout
 
