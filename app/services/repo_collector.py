@@ -27,9 +27,6 @@ DEFAULT_REPOSITORY_FILES: tuple[str, ...] = (
     "examples/README.md",
 )
 
-MAX_COLLECTED_FILE_CHARS = 80_000
-
-
 class RepositoryCollector:
     """Fetch repository metadata plus the MVP documentation/config files."""
 
@@ -39,13 +36,11 @@ class RepositoryCollector:
         cache: JsonFileCache | None = None,
         use_cache: bool = True,
         file_paths: tuple[str, ...] = DEFAULT_REPOSITORY_FILES,
-        max_file_chars: int = MAX_COLLECTED_FILE_CHARS,
     ) -> None:
         self.provider = provider
         self.cache = cache
         self.use_cache = use_cache
         self.file_paths = file_paths
-        self.max_file_chars = max_file_chars
 
     def collect(self, repo_full_name: str) -> dict[str, Any]:
         """Collect repository metadata and selected text files.
@@ -66,7 +61,7 @@ class RepositoryCollector:
         if not repo:
             raise ValueError("repo_full_name must not be empty")
 
-        cache_key = f"{repo}|{','.join(self.file_paths)}|{self.max_file_chars}"
+        cache_key = f"{repo}|{','.join(self.file_paths)}|full"
         if self.cache is not None and self.use_cache:
             cached = self.cache.get("repo_collection", cache_key)
             if cached is not None:
@@ -89,7 +84,7 @@ class RepositoryCollector:
                     continue
                 raise
 
-            decoded_file = decode_github_text_file(raw_file, self.max_file_chars)
+            decoded_file = decode_github_text_file(raw_file)
             if decoded_file is None:
                 collection["skipped_files"].append(path)
                 continue
@@ -100,8 +95,12 @@ class RepositoryCollector:
         return collection
 
 
-def decode_github_text_file(raw_file: dict[str, object], max_chars: int) -> dict[str, object] | None:
-    """Decode a GitHub contents API file response into a bounded text payload."""
+def decode_github_text_file(raw_file: dict[str, object]) -> dict[str, object] | None:
+    """Decode a GitHub contents API file response into a text payload.
+
+    Args:
+        raw_file: GitHub contents API file response.
+    """
 
     if raw_file.get("type") not in (None, "file"):
         return None
@@ -120,9 +119,6 @@ def decode_github_text_file(raw_file: dict[str, object], max_chars: int) -> dict
         return None
 
     content = raw_bytes.decode("utf-8", errors="replace")
-    truncated = len(content) > max_chars
-    if truncated:
-        content = content[:max_chars]
 
     return {
         "path": str(raw_file.get("path") or raw_file.get("name") or ""),
@@ -132,6 +128,6 @@ def decode_github_text_file(raw_file: dict[str, object], max_chars: int) -> dict
         "html_url": str(raw_file.get("html_url") or ""),
         "download_url": str(raw_file.get("download_url") or ""),
         "content": content,
-        "truncated": truncated,
+        "truncated": False,
     }
 

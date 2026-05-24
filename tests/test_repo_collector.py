@@ -38,11 +38,11 @@ class FakeGitHubProvider:
 
 
 class RepositoryCollectorTests(unittest.TestCase):
-    def test_decode_github_text_file_returns_bounded_text_payload(self):
-        decoded = decode_github_text_file(encoded_file("README.md", "abcdef"), max_chars=3)
+    def test_decode_github_text_file_returns_full_text_by_default(self):
+        decoded = decode_github_text_file(encoded_file("README.md", "abcdef"))
 
-        self.assertEqual(decoded["content"], "abc")
-        self.assertTrue(decoded["truncated"])
+        self.assertEqual(decoded["content"], "abcdef")
+        self.assertFalse(decoded["truncated"])
         self.assertEqual(decoded["path"], "README.md")
 
     def test_collect_fetches_metadata_files_and_records_missing_paths(self):
@@ -50,7 +50,6 @@ class RepositoryCollectorTests(unittest.TestCase):
         collector = RepositoryCollector(
             provider=provider,
             file_paths=("README.md", "package.json"),
-            max_file_chars=100,
             cache=None,
         )
 

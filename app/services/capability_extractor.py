@@ -15,10 +15,6 @@ from app.providers.llm_base import LLMProvider
 from app.services.llm_json import parse_json_object
 
 
-MAX_PROMPT_FILE_CHARS = 12_000
-MAX_PROMPT_TOTAL_CHARS = 60_000
-
-
 class CapabilityExtractor:
     """Extract a Repo Skill Card from collected repository content using an LLM."""
 
@@ -125,23 +121,16 @@ def _metadata_summary(metadata: object) -> dict[str, object]:
 
 def _file_sections(files: dict[str, object]) -> str:
     sections: list[str] = []
-    remaining = MAX_PROMPT_TOTAL_CHARS
 
     for path, raw_file in files.items():
-        if remaining <= 0:
-            break
         if not isinstance(raw_file, dict):
             continue
         content = raw_file.get("content")
         if not isinstance(content, str) or not content.strip():
             continue
 
-        max_chars = min(MAX_PROMPT_FILE_CHARS, remaining)
-        snippet = content[:max_chars]
-        remaining -= len(snippet)
-        truncated = bool(raw_file.get("truncated")) or len(content) > len(snippet)
-        marker = "truncated" if truncated else "complete"
-        sections.append(f"--- FILE: {path} ({marker}) ---\n{snippet}")
+        marker = "truncated" if bool(raw_file.get("truncated")) else "complete"
+        sections.append(f"--- FILE: {path} ({marker}) ---\n{content}")
 
     if not sections:
         return "No supported files were collected."
