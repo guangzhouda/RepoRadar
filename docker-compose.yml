@@ -1,0 +1,10 @@
+services:
+  reporadar:
+    image: python:3.11-slim
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    env_file:
+      - .env
+    command: python -m app.main --check-config
+

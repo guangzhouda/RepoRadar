@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local configuration and caches
+.env
+.reporadar_cache/
+
+# Local planning/reference documents
+repo_radar_project_planning_document.md
+docs/
+
+# Editors and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
