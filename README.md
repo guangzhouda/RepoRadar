@@ -17,12 +17,14 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - `.env` 配置读取，且进程环境变量覆盖 `.env`。
 - `--check-config` 配置健康检查。
 - `scripts/analyze_idea.py` 的 Phase 1 LLM query planning + GitHub repository search CLI。
+- `app/services/idea_analysis.py` 承接 idea 分析主流程，CLI 入口保持薄层。
 - 多 query 生成、候选仓库标准化、去重、排序和 JSON 缓存。
 - LLM 候选相关性评审，输出 `relevance_score`、`decision`、`reject_reason` 和 `rationale`。
 - 候选列表保留 `reject` 项用于人工审查，不在展示层直接隐藏。
 - `scripts/fetch_repo.py` 的 Phase 2 仓库抓取 CLI，可抓取仓库元数据和 MVP README/docs/config 文件。
 - LLM Repo Skill Card 抽取，输出项目类别、输入/输出格式、接口形态、核心能力、限制、证据和置信度。
 - Phase 3 评分引擎，按 relevance、maturity、activity、reusability、documentation、license 生成综合分。
+- `app/services/reuse_advisor.py` 根据评分和能力卡生成复用/自研建议。
 - `scripts/export_report.py` 可把分析 JSON 导出为 Markdown 对比报告。
 - DeepSeek / OpenAI 兼容 LLM 的通用配置项。
 - 标准库 `unittest` bootstrap 测试。
@@ -116,9 +118,9 @@ py -3.14 scripts\export_report.py --input analysis.json --output report.md
 
 ```text
 app/        应用代码；按 api/core/models/services/providers/db 分层
-scripts/    命令行入口和后续脚本
+scripts/    命令行入口；只做参数解析、调用 service 和输出
 tests/      标准库 unittest 测试
-examples/   示例输入和占位报告
+examples/   示例输入和示例报告
 frontend/   Streamlit UI 占位
 docs/       本地规划/交接文档，不进入版本控制
 ```
@@ -172,15 +174,15 @@ Lint / format / build：
 依据：
 
 - `app/main.py` 可输出配置健康状态。
-- `scripts/analyze_idea.py` 可生成 queries，并在非 `--offline` 模式调用 GitHub repository search。
+- `scripts/analyze_idea.py` 是薄 CLI；`app/services/idea_analysis.py` 负责编排 query planning、GitHub search、LLM review 和可选能力卡生成。
 - 默认 query generation 和候选解释使用 LLM；`--query-mode rules` 仅作为诊断 fallback。
 - `app/providers/github_rest_provider.py` 实现 GitHub REST repository search。
 - `app/services/github_search.py` 实现候选标准化、去重、排序和缓存。
 - `scripts/fetch_repo.py`、`app/services/repo_collector.py` 和 `app/services/capability_extractor.py` 实现单仓库内容抓取和 LLM Repo Skill Card 抽取。
 - `scripts/analyze_idea.py --extract-cards` 可把 Phase 2 能力卡生成接入候选仓库分析结果。
-- `app/services/scoring.py` 实现初版综合评分，`app/services/report_generator.py` 和 `scripts/export_report.py` 实现 Markdown 报告导出。
+- `app/services/scoring.py` 实现初版综合评分，`app/services/reuse_advisor.py` 生成复用/自研建议，`app/services/report_generator.py` 和 `scripts/export_report.py` 实现 Markdown 报告导出。
 - `app/services/evidence_verifier.py` 仍是后续阶段占位。
-- 测试覆盖配置读取、query generation、候选标准化、搜索去重、仓库内容收集、能力卡抽取、评分和报告生成。
+- 测试覆盖配置读取、query generation、候选标准化、搜索去重、idea 分析编排、仓库内容收集、能力卡抽取、评分和报告生成。
 
 规划文档中的 v0.1 验收目标已具备 CLI 路径，但仍需更多 live 验证和 evidence verifier：输入 TTS audiobook idea 后，搜索候选项目，批量生成能力卡，导出 Markdown 对比报告，并给出是否建议从零做的判断。
 
