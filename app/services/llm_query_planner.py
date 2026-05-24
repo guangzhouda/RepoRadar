@@ -7,8 +7,14 @@ available only for diagnostics and tests.
 
 from __future__ import annotations
 
+import re
+
 from app.providers.llm_base import LLMProvider
 from app.services.llm_json import parse_json_object
+
+
+BOOLEAN_OR_RE = re.compile(r"(^|\s)OR(\s|$)", re.IGNORECASE)
+DISALLOWED_QUERY_CHARS = ("(", ")")
 
 
 class LLMQueryPlanner:
@@ -55,7 +61,7 @@ class LLMQueryPlanner:
             if not isinstance(raw_query, str):
                 continue
             query = " ".join(raw_query.split())
-            if query and query not in seen:
+            if query and _is_allowed_query(query) and query not in seen:
                 seen.add(query)
                 queries.append(query)
             if len(queries) >= max_queries:
@@ -64,3 +70,11 @@ class LLMQueryPlanner:
         if not queries:
             raise ValueError("LLM did not return any usable GitHub search queries")
         return queries
+
+
+def _is_allowed_query(query: str) -> bool:
+    """Return whether an LLM query is narrow enough for GitHub search."""
+
+    if any(char in query for char in DISALLOWED_QUERY_CHARS):
+        return False
+    return BOOLEAN_OR_RE.search(query) is None

@@ -26,6 +26,21 @@ class LLMServiceTests(unittest.TestCase):
         self.assertEqual(queries, ["epub tts audiobook in:readme", "pdf tts srt in:readme"])
         self.assertIn("GitHub repository search query", provider.prompts[0])
 
+    def test_llm_query_planner_filters_broad_boolean_queries(self):
+        provider = FakeLLMProvider(
+            '{"queries": ["epub OR pdf (tts) in:readme", "ebook audiobook srt m4b language:python"]}'
+        )
+
+        queries = LLMQueryPlanner(provider).build_queries("tts idea", max_queries=5)
+
+        self.assertEqual(queries, ["ebook audiobook srt m4b language:python"])
+
+    def test_llm_query_planner_rejects_all_invalid_queries(self):
+        provider = FakeLLMProvider('{"queries": ["epub OR pdf", "(ebook audiobook)"]}')
+
+        with self.assertRaises(ValueError):
+            LLMQueryPlanner(provider).build_queries("tts idea", max_queries=5)
+
     def test_llm_candidate_reviewer_merges_reviews_and_sorts(self):
         provider = FakeLLMProvider(
             """
