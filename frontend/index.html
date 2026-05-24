@@ -84,12 +84,13 @@
                 <span class="badge badge-success">可运行</span>
               </div>
               <div class="status-list">
-                <div><span>GitHub API</span><strong>已连接</strong></div>
-                <div><span>LLM API</span><strong>流式响应</strong></div>
+                <div><span>本地 API</span><strong id="api-status">检查中</strong></div>
+                <div><span>GitHub API</span><strong id="github-status">待检测</strong></div>
+                <div><span>LLM API</span><strong id="llm-status">待检测</strong></div>
                 <div><span>超时</span><strong>300s</strong></div>
                 <div><span>缓存目录</span><strong>.reporadar_cache</strong></div>
               </div>
-              <div class="hint-box">当前是静态 UI 原型，页面结构按后端 CLI 输出形态设计，后续可接本地 API 或 CLI bridge。</div>
+              <div class="hint-box" id="api-mode-hint">正在检测本地后端连接。</div>
             </aside>
           </div>
 
@@ -169,24 +170,13 @@
             <section class="panel repo-profile">
               <button class="link-button" type="button" data-nav="analyze">返回候选列表</button>
               <h1 id="detail-title">denizsafak/abogen</h1>
-              <p class="repo-url">github.com/denizsafak/abogen</p>
-              <p>从 EPUB、PDF 和文本生成有声书，并输出同步字幕。</p>
-              <div class="tag-row">
-                <span>Python</span>
-                <span>MIT</span>
-                <span>有声书</span>
-                <span>TTS</span>
-                <span>字幕</span>
-                <span>EPUB</span>
-              </div>
+              <p class="repo-url" id="detail-repo-url">github.com/denizsafak/abogen</p>
+              <p id="detail-repo-description">从 EPUB、PDF 和文本生成有声书，并输出同步字幕。</p>
+              <div class="tag-row" id="detail-tags"></div>
               <h2>评分拆解</h2>
               <div class="score-list" id="score-list"></div>
               <h2>证据</h2>
-              <div class="evidence-card">
-                <span>README.md</span>
-                <blockquote>支持拖入 ePub、PDF、文本、Markdown 或字幕文件。</blockquote>
-                <strong>置信度 0.95</strong>
-              </div>
+              <div class="evidence-card" id="detail-evidence"></div>
             </section>
 
             <section class="panel skill-card">
@@ -197,41 +187,20 @@
                 </div>
                 <span class="confidence-pill">置信度 0.900</span>
               </div>
-              <div class="property-table">
-                <div><span>类别</span><strong>文本转语音、有声书生成、字幕同步</strong></div>
-                <div><span>输入</span><strong>EPUB、PDF、TXT、Markdown、SRT</strong></div>
-                <div><span>输出</span><strong>WAV、FLAC、MP3、OPUS、M4B、SRT</strong></div>
-                <div><span>接口</span><strong>CLI、Web、API</strong></div>
-                <div><span>模型提供方</span><strong>Kokoro、Supertonic</strong></div>
-                <div><span>部署</span><strong>pip、docker、自托管</strong></div>
-              </div>
+              <div class="property-table" id="skill-properties"></div>
               <div class="capability-grid">
                 <article>
                   <h3>核心能力</h3>
-                  <ul>
-                    <li>文本转语音生成</li>
-                    <li>多格式电子书输入</li>
-                    <li>同步字幕生成</li>
-                    <li>按章节输出有声书</li>
-                    <li>批量队列处理</li>
-                  </ul>
+                  <ul id="core-capabilities"></ul>
                 </article>
                 <article>
                   <h3>可选能力</h3>
-                  <ul>
-                    <li>LLM 文本规范化</li>
-                    <li>Audiobookshelf 集成</li>
-                    <li>GPU 加速</li>
-                  </ul>
+                  <ul id="optional-capabilities"></ul>
                 </article>
               </div>
               <div class="limitations">
                 <h3>限制</h3>
-                <ul>
-                  <li>词级字幕仅支持英文</li>
-                  <li>暂不支持扫描 PDF 的 OCR</li>
-                  <li>AMD GPU 加速依赖 Linux ROCm</li>
-                </ul>
+                <ul id="limitations-list"></ul>
               </div>
             </section>
           </div>
@@ -241,19 +210,19 @@
           <div class="report-shell">
             <aside class="report-nav panel">
               <h2>报告目录</h2>
-              <button class="report-link is-active" type="button">用户想法</button>
-              <button class="report-link" type="button">搜索策略</button>
-              <button class="report-link" type="button">候选总览</button>
-              <button class="report-link" type="button">Top 能力卡</button>
-              <button class="report-link" type="button">能力对比</button>
-              <button class="report-link" type="button">实现信号</button>
-              <button class="report-link" type="button">复用与自研</button>
-              <button class="report-link" type="button">结论</button>
+              <button class="report-link is-active" type="button" data-section="report-idea">用户想法</button>
+              <button class="report-link" type="button" data-section="report-queries">搜索策略</button>
+              <button class="report-link" type="button" data-section="report-candidates">候选总览</button>
+              <button class="report-link" type="button" data-section="report-skill-cards">Top 能力卡</button>
+              <button class="report-link" type="button" data-section="report-capabilities">能力对比</button>
+              <button class="report-link" type="button" data-section="report-signals">实现信号</button>
+              <button class="report-link" type="button" data-section="report-reuse">复用与自研</button>
+              <button class="report-link" type="button" data-section="report-recommendation">结论</button>
               <div class="report-meta">
                 <span>生成时间</span>
-                <strong>2026-05-25 10:15</strong>
+                <strong id="report-generated-at">尚未生成</strong>
                 <span>Run ID</span>
-                <code>run_20260525_101523</code>
+                <code id="report-run-id">demo</code>
               </div>
             </aside>
 
@@ -263,38 +232,10 @@
                 <div class="toolbar-actions">
                   <button class="button button-secondary" id="export-markdown" type="button">导出 Markdown</button>
                   <button class="button button-secondary" id="copy-json" type="button">复制 JSON</button>
-                  <button class="button button-primary" type="button">打开报告</button>
+                  <button class="button button-primary" id="refresh-report" type="button">刷新报告</button>
                 </div>
               </div>
-              <article class="report-document">
-                <h2>1. 用户想法</h2>
-                <p>我想做一个把 EPUB/PDF 转成 TTS 音频，并生成同步字幕的工具。</p>
-                <h2>2. 搜索策略</h2>
-                <div class="query-row">
-                  <code>epub pdf tts subtitle synchronized</code>
-                  <code>audiobook generator subtitle sync</code>
-                </div>
-                <h2>3. 候选总览</h2>
-                <table class="report-table">
-                  <thead>
-                    <tr><th>仓库</th><th>决策</th><th>评审</th><th>评分</th><th>复用</th><th>文档</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr><td>denizsafak/abogen</td><td><span class="badge badge-success">保留</span></td><td>直接匹配 EPUB/PDF 转 TTS 和同步字幕</td><td>0.974</td><td>1.000</td><td>0.968</td></tr>
-                    <tr><td>lukaszliniewicz/Pandrator</td><td><span class="badge badge-success">保留</span></td><td>相似的有声书工作流</td><td>0.716</td><td>0.250</td><td>0.000</td></tr>
-                    <tr><td>BoltzmannEntropy/MimikaStudio</td><td><span class="badge badge-warn">待复核</span></td><td>字幕证据较弱</td><td>0.582</td><td>0.250</td><td>0.000</td></tr>
-                  </tbody>
-                </table>
-                <h2>4. Top 项目能力卡</h2>
-                <div class="inline-skill">
-                  <strong>denizsafak/abogen</strong>
-                  <span>输入：EPUB、PDF、TXT、Markdown、SRT</span>
-                  <span>输出：WAV、MP3、OPUS、M4B、SRT</span>
-                  <span>接口：CLI、Web、API</span>
-                </div>
-                <h2>5. 结论</h2>
-                <div class="recommendation">优先复用或 fork denizsafak/abogen，再针对缺口做人工复核。</div>
-              </article>
+              <article class="report-document" id="report-document" aria-live="polite"></article>
             </section>
           </div>
         </section>

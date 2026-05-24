@@ -31,6 +31,7 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - DeepSeek / OpenAI 兼容 LLM 的通用配置项。
 - OpenAI-compatible LLM 调用使用流式响应读取，默认 timeout 为 300 秒，适配长上下文能力卡抽取。
 - `frontend/index.html` 提供零依赖静态 UI MVP，覆盖 idea 输入、运行状态、候选列表、能力卡、报告预览和设置页。
+- `scripts/serve_frontend.py` 提供标准库本地 HTTP 服务，静态前端可通过 `/api/analyze` 和 `/api/report` 调用现有后端分析与报告逻辑。
 - 标准库 `unittest` bootstrap 测试。
 
 部分实现：
@@ -111,7 +112,19 @@ py -3.14 scripts\analyze_idea.py --idea "I want to build a tool that converts EP
 py -3.14 scripts\export_report.py --input .reporadar_cache\live-analysis.json --output .reporadar_cache\live-report.md
 ```
 
-本地打开静态 UI MVP：
+启动带后端 API 的本地前端：
+
+```powershell
+py -3.14 scripts\serve_frontend.py
+```
+
+然后访问：
+
+```text
+http://127.0.0.1:8787/
+```
+
+直接打开静态 UI 只会进入演示模式，不会调用 GitHub/LLM：
 
 ```powershell
 Invoke-Item frontend\index.html
@@ -138,7 +151,7 @@ app/        应用代码；按 api/core/models/services/providers/db 分层
 scripts/    命令行入口；只做参数解析、调用 service 和输出
 tests/      标准库 unittest 测试
 examples/   示例输入和示例报告
-frontend/   零依赖静态 UI MVP，后续接入 CLI/API
+frontend/   零依赖静态 UI MVP；通过 scripts/serve_frontend.py 接本地 API
 docs/       本地规划/交接文档，不进入版本控制
 ```
 
@@ -160,6 +173,12 @@ py -3.14 -m app.main --check-config
 
 ```powershell
 py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 10 --offline
+```
+
+运行本地前端和 API：
+
+```powershell
+py -3.14 scripts\serve_frontend.py
 ```
 
 运行单仓库抓取：
@@ -201,7 +220,8 @@ Lint / format / build：
 - `app/services/evidence_verifier.py` 实现确定性 evidence quality 检查。
 - `app/services/scoring.py` 实现初版综合评分并使用 evidence verifier 调整 documentation score。
 - `app/services/reuse_advisor.py` 生成复用/自研建议，`app/services/report_generator.py` 和 `scripts/export_report.py` 实现 Markdown 报告导出。
-- `frontend/index.html`、`frontend/styles.css` 和 `frontend/app.js` 提供可直接打开的静态前端原型，目前使用示例数据模拟 CLI 结果。
+- `app/api/local_server.py` 和 `scripts/serve_frontend.py` 提供本地 HTTP API：`GET /api/health`、`POST /api/analyze`、`POST /api/report`。
+- `frontend/index.html`、`frontend/styles.css` 和 `frontend/app.js` 提供可直接打开的静态前端原型；通过本地服务访问时会调用真实后端 API，通过文件直接打开时使用演示数据。
 - 测试覆盖配置读取、query generation、候选标准化、搜索去重、idea 分析编排、仓库内容收集、能力卡抽取、evidence verification、评分和报告生成。
 
 规划文档中的 v0.1 验收目标已具备 CLI 路径，但仍需更多 live 验证：输入 TTS audiobook idea 后，搜索候选项目，批量生成能力卡，导出 Markdown 对比报告，并给出是否建议从零做的判断。
