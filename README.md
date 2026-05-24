@@ -16,8 +16,9 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - Python 包骨架和命令入口。
 - `.env` 配置读取，且进程环境变量覆盖 `.env`。
 - `--check-config` 配置健康检查。
-- `scripts/analyze_idea.py` 的 Phase 1 GitHub repository search CLI。
+- `scripts/analyze_idea.py` 的 Phase 1 LLM query planning + GitHub repository search CLI。
 - 多 query 生成、候选仓库标准化、去重、排序和 JSON 缓存。
+- LLM 候选相关性评审，输出 `relevance_score`、`decision`、`reject_reason` 和 `rationale`。
 - DeepSeek / OpenAI 兼容 LLM 的通用配置项。
 - 标准库 `unittest` bootstrap 测试。
 
@@ -42,10 +43,16 @@ Copy-Item .env.example .env
 py -3.14 -m app.main --check-config
 ```
 
-Phase 0 idea 分析预览：
+LLM query 预览：
 
 ```powershell
 py -3.14 scripts\analyze_idea.py --idea "I want to build a tool that converts EPUB/PDF files into TTS audio with synchronized subtitles." --max-repos 10 --offline
+```
+
+规则 fallback 预览，仅用于诊断或没有 LLM key 时：
+
+```powershell
+py -3.14 scripts\analyze_idea.py --idea "project idea" --offline --query-mode rules
 ```
 
 运行 GitHub 搜索：
@@ -129,6 +136,7 @@ Lint / format / build：
 
 - `app/main.py` 可输出配置健康状态。
 - `scripts/analyze_idea.py` 可生成 queries，并在非 `--offline` 模式调用 GitHub repository search。
+- 默认 query generation 和候选解释使用 LLM；`--query-mode rules` 仅作为诊断 fallback。
 - `app/providers/github_rest_provider.py` 实现 GitHub REST repository search。
 - `app/services/github_search.py` 实现候选标准化、去重、排序和缓存。
 - `app/services/repo_collector.py`、`capability_extractor.py`、`evidence_verifier.py`、`scoring.py`、`report_generator.py` 仍是后续阶段占位。

@@ -17,8 +17,11 @@ if str(ROOT) not in sys.path:
 
 from app.core.config import load_settings
 from app.providers.github_rest_provider import GitHubProviderError, GitHubRestProvider
+from app.providers.openai_provider import LLMProviderError, OpenAIProvider
 from app.services.cache import JsonFileCache
 from app.services.github_search import GitHubSearchService
+from app.services.llm_candidate_reviewer import LLMCandidateReviewer
+from app.services.llm_query_planner import LLMQueryPlanner
 from app.services.query_understanding import build_search_queries
 
 
@@ -30,6 +33,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--format", choices=("json", "markdown"), default="json", help="Output format.")
     parser.add_argument("--offline", action="store_true", help="Only generate search queries without calling GitHub.")
     parser.add_argument("--no-cache", action="store_true", help="Disable local GitHub search cache.")
+    parser.add_argument(
+        "--query-mode",
+        choices=("llm", "rules"),
+        default="llm",
+        help="Use LLM query planning by default; rules mode is only a diagnostic fallback.",
+    )
+    parser.add_argument(
+        "--review-mode",
+        choices=("llm", "none"),
+        default="llm",
+        help="Use LLM relevance review by default after GitHub search.",
+    )
     return parser
 
 
@@ -44,6 +59,14 @@ def build_markdown(idea: str, candidates: list[dict[str, object]]) -> str:
     for index, candidate in enumerate(candidates, start=1):
         lines.append(f"{index}. [{candidate['full_name']}]({candidate['url']})")
         lines.append(f"   - Stars: {candidate['stars']} | Forks: {candidate['forks']} | Language: {candidate['language']}")
+        if "relevance_score" in candidate:
+            lines.append(
+                f"   - Relevance: {candidate['relevance_score']} | Decision: {candidate.get('decision', '')}"
+            )
+        if candidate.get("reject_reason"):
+            lines.append(f"   - Reject reason: {candidate['reject_reason']}")
+        if candidate.get("rationale"):
+            lines.append(f"   - Rationale: {candidate['rationale']}")
         if candidate["description"]:
             lines.append(f"   - {candidate['description']}")
     return "\n".join(lines)
@@ -52,12 +75,32 @@ def build_markdown(idea: str, candidates: list[dict[str, object]]) -> str:
 def main() -> int:
     args = build_parser().parse_args()
     settings = load_settings()
-    queries = build_search_queries(args.idea, max_queries=args.max_queries)
+    llm_provider = OpenAIProvider(
+        api_key=settings.llm_api_key,
+        base_url=settings.llm_base_url,
+        model=settings.llm_model,
+    )
+    try:
+        if args.query_mode == "llm":
+            queries = LLMQueryPlanner(llm_provider).build_queries(args.idea, max_queries=args.max_queries)
+        else:
+            queries = build_search_queries(args.idea, max_queries=args.max_queries)
+    except (LLMProviderError, ValueError) as exc:
+        payload = {
+            "phase": "1-cli-search",
+            "idea": args.idea.strip(),
+            "max_repos": args.max_repos,
+            "error": str(exc),
+        }
+        print(json.dumps(payload, indent=2, ensure_ascii=False), file=sys.stderr)
+        return 1
 
     payload = {
         "phase": "1-cli-search",
         "idea": args.idea.strip(),
         "max_repos": args.max_repos,
+        "query_mode": args.query_mode,
+        "review_mode": args.review_mode if not args.offline else "none",
         "queries": queries,
         "candidates": [],
     }
@@ -70,8 +113,19 @@ def main() -> int:
             use_cache=not args.no_cache,
         )
         try:
-            payload["candidates"] = [candidate.to_dict() for candidate in service.search_many(queries, max_repos=args.max_repos)]
+            review_pool_size = min(50, max(args.max_repos * 4, args.max_repos))
+            candidates = service.search_many(queries, max_repos=review_pool_size)
+            if args.review_mode == "llm":
+                reviewer = LLMCandidateReviewer(llm_provider)
+                reviews = reviewer.review(args.idea.strip(), candidates)
+                payload["candidates"] = reviewer.apply_reviews(candidates, reviews, args.max_repos)
+            else:
+                payload["candidates"] = [candidate.to_dict() for candidate in candidates[: args.max_repos]]
         except GitHubProviderError as exc:
+            payload["error"] = str(exc)
+            print(json.dumps(payload, indent=2, ensure_ascii=False), file=sys.stderr)
+            return 1
+        except (LLMProviderError, ValueError) as exc:
             payload["error"] = str(exc)
             print(json.dumps(payload, indent=2, ensure_ascii=False), file=sys.stderr)
             return 1
