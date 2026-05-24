@@ -29,14 +29,33 @@ class CandidateReview:
 class LLMCandidateReviewer:
     """Review candidates semantically with an LLM."""
 
-    def __init__(self, provider: LLMProvider) -> None:
+    def __init__(self, provider: LLMProvider, batch_size: int = 5) -> None:
         self.provider = provider
+        self.batch_size = max(1, batch_size)
 
     def review(self, idea: str, candidates: list[RepositoryCandidate]) -> dict[str, CandidateReview]:
         """Return LLM review results keyed by repository full name."""
 
         if not candidates:
             return {}
+
+        reviews: dict[str, CandidateReview] = {}
+        for batch in _batches(candidates, self.batch_size):
+            try:
+                reviews.update(self._review_batch(idea, batch))
+            except (RuntimeError, ValueError) as exc:
+                for candidate in batch:
+                    reviews[candidate.full_name] = CandidateReview(
+                        full_name=candidate.full_name,
+                        relevance_score=0.0,
+                        decision="reject",
+                        reject_reason=f"LLM review batch failed: {exc}",
+                        rationale="",
+                    )
+        return reviews
+
+    def _review_batch(self, idea: str, candidates: list[RepositoryCandidate]) -> dict[str, CandidateReview]:
+        """Return LLM review results for one bounded candidate batch."""
 
         prompt = f"""
 你是 RepoRadar 的候选 GitHub 仓库相关性评审器。
@@ -131,3 +150,7 @@ def _clamp_score(raw_score: object) -> float:
     except (TypeError, ValueError):
         return 0.0
     return max(0.0, min(1.0, score))
+
+
+def _batches(candidates: list[RepositoryCandidate], batch_size: int) -> list[list[RepositoryCandidate]]:
+    return [candidates[index : index + batch_size] for index in range(0, len(candidates), batch_size)]

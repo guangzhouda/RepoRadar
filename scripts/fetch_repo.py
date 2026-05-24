@@ -22,6 +22,7 @@ from app.providers.openai_provider import LLMProviderError, OpenAIProvider
 from app.services.cache import JsonFileCache
 from app.services.capability_extractor import CapabilityExtractor
 from app.services.repo_collector import RepositoryCollector
+from app.services.skill_card_cache import CachedCapabilityExtractor
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -64,9 +65,10 @@ def main() -> int:
     args = build_parser().parse_args()
     settings = load_settings()
     provider = GitHubRestProvider(token=settings.github_token, base_url=settings.github_api_base_url)
+    cache = JsonFileCache(settings.cache_dir)
     collector = RepositoryCollector(
         provider=provider,
-        cache=JsonFileCache(settings.cache_dir),
+        cache=cache,
         use_cache=not args.no_cache,
     )
 
@@ -85,7 +87,13 @@ def main() -> int:
                 base_url=settings.llm_base_url,
                 model=settings.llm_model,
             )
-            card = CapabilityExtractor(llm_provider).extract(args.repo.strip(), collection)
+            extractor = CachedCapabilityExtractor(
+                CapabilityExtractor(llm_provider),
+                cache=cache,
+                use_cache=not args.no_cache,
+                model_id=settings.llm_model,
+            )
+            card = extractor.extract(args.repo.strip(), collection)
             payload["skill_card"] = card.to_dict()
     except (GitHubProviderError, LLMProviderError, ValueError) as exc:
         payload["error"] = str(exc)

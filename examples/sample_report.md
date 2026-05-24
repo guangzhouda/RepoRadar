@@ -10,9 +10,9 @@ Build a tool that converts EPUB/PDF files into TTS audio with synchronized subti
 
 ## Candidate Overview
 
-| Repo | Decision | Score | Relevance | Maturity | Activity | Reuse | Docs | License |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| [denizsafak/abogen](https://github.com/denizsafak/abogen) | keep | 0.878 | 0.910 | 0.730 | 1.000 | 0.800 | 0.937 | 1.000 |
+| Repo | Decision | Review | Score | Relevance | Maturity | Activity | Reuse | Docs | License | Notes |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| [denizsafak/abogen](https://github.com/denizsafak/abogen) | keep | Directly covers EPUB/PDF to audio with synchronized captions. | 0.878 | 0.910 | 0.730 | 1.000 | 0.800 | 0.937 | 1.000 |  |
 
 ## Top Project Skill Cards
 
@@ -22,10 +22,16 @@ Converts ebook documents into generated audiobook output with subtitle-oriented 
 
 - Score: `0.878`
 - Confidence: `0.840`
+- Categories: audiobook, text-to-speech
 - Interfaces: cli
 - Inputs: EPUB, PDF
 - Outputs: MP3, SRT
 - Core capabilities: ebook to speech audio, subtitle generation
+- Optional capabilities: voice selection, chapter markers
+- Model providers: Kokoro
+- Deployment: pip, docker
+- Suitable for: audiobook generation, subtitle generation
+- Not supported: OCR for scanned PDFs
 - Limitations: PDF extraction quality depends on source documents
 - Evidence: `README.md` - "Generate audiobooks from ebook files with subtitles."
 
@@ -34,6 +40,12 @@ Converts ebook documents into generated audiobook output with subtitle-oriented 
 | Repo | Inputs | Outputs | Interfaces | Core Capabilities | Limitations |
 | --- | --- | --- | --- | --- | --- |
 | denizsafak/abogen | EPUB, PDF | MP3, SRT | cli | ebook to speech audio, subtitle generation | PDF extraction quality depends on source documents |
+
+## Implementation Signals
+
+| Repo | Model Providers | Deployment | Suitable For | Not Supported |
+| --- | --- | --- | --- | --- |
+| denizsafak/abogen | Kokoro | pip, docker | audiobook generation, subtitle generation | OCR for scanned PDFs |
 
 ## Reuse vs Build Analysis
 

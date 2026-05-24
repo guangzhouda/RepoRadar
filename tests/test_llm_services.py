@@ -12,6 +12,11 @@ class FakeLLMProvider:
 
     def complete(self, prompt):
         self.prompts.append(prompt)
+        if isinstance(self.response, list):
+            outcome = self.response.pop(0)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return outcome
         return self.response
 
 
@@ -63,7 +68,44 @@ class LLMServiceTests(unittest.TestCase):
 
         self.assertEqual(enriched[0]["full_name"], "tool/tts")
         self.assertEqual(enriched[0]["decision"], "keep")
+        self.assertEqual(enriched[0]["relevance_score"], 0.92)
         self.assertEqual(enriched[1]["reject_reason"], "awesome list")
+
+    def test_llm_candidate_reviewer_reviews_candidates_in_batches(self):
+        provider = FakeLLMProvider(
+            [
+                '{"candidates": [{"full_name": "repo/one", "relevance_score": 0.8, "decision": "keep"}]}',
+                '{"candidates": [{"full_name": "repo/two", "relevance_score": 0.2, "decision": "reject", "reject_reason": "not enough overlap"}]}',
+            ]
+        )
+        candidates = [
+            RepositoryCandidate(full_name="repo/one", url="https://github.com/repo/one"),
+            RepositoryCandidate(full_name="repo/two", url="https://github.com/repo/two"),
+        ]
+
+        reviews = LLMCandidateReviewer(provider, batch_size=1).review("tts idea", candidates)
+
+        self.assertEqual(len(provider.prompts), 2)
+        self.assertEqual(reviews["repo/one"].decision, "keep")
+        self.assertEqual(reviews["repo/two"].reject_reason, "not enough overlap")
+
+    def test_llm_candidate_reviewer_isolates_failed_batches(self):
+        provider = FakeLLMProvider(
+            [
+                '{"candidates": [{"full_name": "repo/one", "relevance_score": 0.8, "decision": "keep"}]}',
+                RuntimeError("provider timeout"),
+            ]
+        )
+        candidates = [
+            RepositoryCandidate(full_name="repo/one", url="https://github.com/repo/one"),
+            RepositoryCandidate(full_name="repo/two", url="https://github.com/repo/two"),
+        ]
+
+        reviews = LLMCandidateReviewer(provider, batch_size=1).review("tts idea", candidates)
+
+        self.assertEqual(reviews["repo/one"].decision, "keep")
+        self.assertEqual(reviews["repo/two"].decision, "reject")
+        self.assertIn("provider timeout", reviews["repo/two"].reject_reason)
 
 
 if __name__ == "__main__":

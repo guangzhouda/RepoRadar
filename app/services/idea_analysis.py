@@ -21,6 +21,7 @@ from app.services.llm_candidate_reviewer import LLMCandidateReviewer
 from app.services.llm_query_planner import LLMQueryPlanner
 from app.services.query_understanding import build_search_queries
 from app.services.repo_collector import RepositoryCollector
+from app.services.skill_card_cache import CachedCapabilityExtractor
 
 
 @dataclass(frozen=True)
@@ -99,7 +100,12 @@ class IdeaAnalysisService:
         provider = _build_github_provider(self.settings)
         cache = JsonFileCache(self.settings.cache_dir)
         collector = RepositoryCollector(provider=provider, cache=cache, use_cache=not options.no_cache)
-        extractor = CapabilityExtractor(llm_provider)
+        extractor = CachedCapabilityExtractor(
+            CapabilityExtractor(llm_provider),
+            cache=cache,
+            use_cache=not options.no_cache,
+            model_id=self.settings.llm_model,
+        )
         attached = 0
 
         for candidate in candidates:

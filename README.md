@@ -23,6 +23,7 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - 候选列表保留 `reject` 项用于人工审查，不在展示层直接隐藏。
 - `scripts/fetch_repo.py` 的 Phase 2 仓库抓取 CLI，可抓取仓库元数据和 MVP README/docs/config 文件。
 - LLM Repo Skill Card 抽取，输出项目类别、输入/输出格式、接口形态、核心能力、限制、证据和置信度。
+- Repo Skill Card 结果会按 repo、LLM model 和仓库内容指纹缓存，重复分析时复用已生成能力卡。
 - Phase 3 评分引擎，按 relevance、maturity、activity、reusability、documentation、license 生成综合分。
 - 确定性 evidence verifier，检查缺失、低置信、重复和可疑 instruction-like evidence，并影响报告风险提示。
 - `app/services/reuse_advisor.py` 根据评分和能力卡生成复用/自研建议。
@@ -188,6 +189,7 @@ Lint / format / build：
 - `app/providers/github_rest_provider.py` 实现 GitHub REST repository search。
 - `app/services/github_search.py` 实现候选标准化、去重、排序和缓存。
 - `scripts/fetch_repo.py`、`app/services/repo_collector.py` 和 `app/services/capability_extractor.py` 实现单仓库内容抓取和 LLM Repo Skill Card 抽取；LLM provider 使用流式响应读取和 300 秒默认 timeout。
+- `app/services/skill_card_cache.py` 缓存 LLM Repo Skill Card，`app/services/llm_candidate_reviewer.py` 默认按 5 个候选一批做 LLM review，并隔离失败批次。
 - `scripts/analyze_idea.py --extract-cards` 可把 Phase 2 能力卡生成接入候选仓库分析结果。
 - `app/services/evidence_verifier.py` 实现确定性 evidence quality 检查。
 - `app/services/scoring.py` 实现初版综合评分并使用 evidence verifier 调整 documentation score。

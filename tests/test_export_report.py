@@ -19,6 +19,7 @@ class ExportReportTests(unittest.TestCase):
                         "license": "MIT",
                         "relevance_score": 0.9,
                         "decision": "keep",
+                        "skill_card_error": "cached miss",
                         "skill_card": {
                             "repo": "owner/repo",
                             "name": "repo",
@@ -36,6 +37,7 @@ class ExportReportTests(unittest.TestCase):
         self.assertEqual(report.queries, ("epub tts audiobook in:readme",))
         self.assertEqual(report.candidates[0].full_name, "owner/repo")
         self.assertEqual(report.assessments[0].decision, "keep")
+        self.assertEqual(report.assessments[0].skill_card_error, "cached miss")
         self.assertEqual(report.skill_cards[0].core_capabilities, ("ebook to audio",))
 
     def test_build_report_from_payload_requires_candidates_list(self):

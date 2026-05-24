@@ -22,6 +22,7 @@ class CandidateAssessment:
     decision: str = ""
     reject_reason: str = ""
     rationale: str = ""
+    skill_card_error: str = ""
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "CandidateAssessment":
@@ -38,6 +39,7 @@ class CandidateAssessment:
             decision=str(data.get("decision") or ""),
             reject_reason=str(data.get("reject_reason") or ""),
             rationale=str(data.get("rationale") or ""),
+            skill_card_error=str(data.get("skill_card_error") or ""),
         )
 
 
