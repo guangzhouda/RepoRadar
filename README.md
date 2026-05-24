@@ -28,6 +28,7 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - `app/services/reuse_advisor.py` 根据评分和能力卡生成复用/自研建议。
 - `scripts/export_report.py` 可把分析 JSON 导出为 Markdown 对比报告。
 - DeepSeek / OpenAI 兼容 LLM 的通用配置项。
+- OpenAI-compatible LLM 调用使用流式响应读取，默认 timeout 为 300 秒，适配长上下文能力卡抽取。
 - 标准库 `unittest` bootstrap 测试。
 
 部分实现：
@@ -186,7 +187,7 @@ Lint / format / build：
 - 默认 query generation 和候选解释使用 LLM；`--query-mode rules` 仅作为诊断 fallback。
 - `app/providers/github_rest_provider.py` 实现 GitHub REST repository search。
 - `app/services/github_search.py` 实现候选标准化、去重、排序和缓存。
-- `scripts/fetch_repo.py`、`app/services/repo_collector.py` 和 `app/services/capability_extractor.py` 实现单仓库内容抓取和 LLM Repo Skill Card 抽取。
+- `scripts/fetch_repo.py`、`app/services/repo_collector.py` 和 `app/services/capability_extractor.py` 实现单仓库内容抓取和 LLM Repo Skill Card 抽取；LLM provider 使用流式响应读取和 300 秒默认 timeout。
 - `scripts/analyze_idea.py --extract-cards` 可把 Phase 2 能力卡生成接入候选仓库分析结果。
 - `app/services/evidence_verifier.py` 实现确定性 evidence quality 检查。
 - `app/services/scoring.py` 实现初版综合评分并使用 evidence verifier 调整 documentation score。

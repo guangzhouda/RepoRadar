@@ -25,7 +25,7 @@ class OpenAIProvider:
         api_key: str,
         base_url: str,
         model: str,
-        timeout: int = 60,
+        timeout: int = 300,
         opener: Callable[..., object] = urlopen,
     ) -> None:
         self.api_key = api_key
@@ -53,6 +53,7 @@ class OpenAIProvider:
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1,
+            "stream": True,
         }
         request = Request(
             f"{self.base_url}/chat/completions",
@@ -67,23 +68,63 @@ class OpenAIProvider:
 
         try:
             with self._opener(request, timeout=self.timeout) as response:
-                raw = response.read().decode("utf-8")
+                return _read_streaming_content(response)
         except HTTPError as exc:
-            message = exc.read().decode("utf-8", errors="replace")
+            try:
+                message = exc.read().decode("utf-8", errors="replace")
+            finally:
+                exc.close()
             raise LLMProviderError(f"LLM request failed with HTTP {exc.code}: {message}") from exc
         except URLError as exc:
             raise LLMProviderError(f"LLM request failed: {exc.reason}") from exc
+        except TimeoutError as exc:
+            raise LLMProviderError(f"LLM request timed out after {self.timeout} seconds") from exc
+
+
+def _read_streaming_content(response: object) -> str:
+    """Read OpenAI-compatible SSE chunks into one assistant message."""
+
+    chunks: list[str] = []
+    for raw_line in response:
+        line = raw_line.decode("utf-8", errors="replace").strip()
+        if not line or not line.startswith("data:"):
+            continue
+
+        data = line.removeprefix("data:").strip()
+        if data == "[DONE]":
+            break
 
         try:
-            decoded = json.loads(raw)
-            choices = decoded["choices"]
-            first_choice = choices[0]
-            message = first_choice.get("message", {})
-            content = message.get("content") or first_choice.get("text")
-        except (KeyError, IndexError, TypeError) as exc:
-            raise LLMProviderError("LLM response did not include completion content") from exc
+            event = json.loads(data)
+            choices = event.get("choices", [])
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise LLMProviderError("LLM stream returned an invalid event") from exc
+        if not isinstance(choices, list) or not choices:
+            continue
 
-        if not isinstance(content, str):
-            raise LLMProviderError("LLM completion content was not a string")
-        return content
+        first_choice = choices[0]
+
+        content = _choice_content(first_choice)
+        if content:
+            chunks.append(content)
+
+    if not chunks:
+        raise LLMProviderError("LLM stream did not include completion content")
+    return "".join(chunks)
+
+
+def _choice_content(choice: object) -> str:
+    if not isinstance(choice, dict):
+        return ""
+
+    delta = choice.get("delta", {})
+    if isinstance(delta, dict) and isinstance(delta.get("content"), str):
+        return delta["content"]
+
+    message = choice.get("message", {})
+    if isinstance(message, dict) and isinstance(message.get("content"), str):
+        return message["content"]
+
+    text = choice.get("text")
+    return text if isinstance(text, str) else ""
 
