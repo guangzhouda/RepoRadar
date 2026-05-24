@@ -1,7 +1,9 @@
+const sampleIdea = "我想做一个把 EPUB/PDF 转成 TTS 音频，并生成同步字幕的工具。";
+
 const sampleCandidates = [
   {
     fullName: "denizsafak/abogen",
-    description: "Generate audiobooks from EPUBs, PDFs and text with synchronized captions.",
+    description: "从 EPUB、PDF 和文本生成有声书，并输出同步字幕。",
     decision: "keep",
     score: 0.974,
     relevance: 1,
@@ -9,11 +11,11 @@ const sampleCandidates = [
     docs: 0.968,
     stars: 4545,
     language: "Python",
-    updated: "May 24",
+    updated: "5月24日",
   },
   {
     fullName: "lukaszliniewicz/Pandrator",
-    description: "Turn PDFs and EPUBs into audiobooks; subtitles or videos into dubbed videos.",
+    description: "将 PDF/EPUB 转成有声书，也支持字幕或视频配音工作流。",
     decision: "keep",
     score: 0.716,
     relevance: 1,
@@ -21,11 +23,11 @@ const sampleCandidates = [
     docs: 0,
     stars: 561,
     language: "Python",
-    updated: "May 22",
+    updated: "5月22日",
   },
   {
     fullName: "BoltzmannEntropy/MimikaStudio",
-    description: "Local-first audiobook converter with TTS and voice cloning signals.",
+    description: "本地优先的有声书转换工具，具备 TTS 和声音克隆信号。",
     decision: "review",
     score: 0.582,
     relevance: 0.6,
@@ -33,28 +35,34 @@ const sampleCandidates = [
     docs: 0,
     stars: 571,
     language: "Dart",
-    updated: "Apr 01",
+    updated: "4月1日",
   },
 ];
 
 const scoreRows = [
-  ["Overall", 0.974],
-  ["Relevance", 1],
-  ["Maturity", 0.886],
-  ["Activity", 1],
-  ["Reuse", 1],
-  ["Docs", 0.968],
-  ["License", 1],
+  ["综合", 0.974],
+  ["相关性", 1],
+  ["成熟度", 0.886],
+  ["活跃度", 1],
+  ["复用性", 1],
+  ["文档", 0.968],
+  ["许可证", 1],
 ];
 
 const logs = [
-  "planning queries with llm provider",
-  "query accepted: epub pdf tts subtitle synchronized",
-  "github search returned 3 normalized candidates",
-  "review batch 1/1 completed",
-  "collecting README.md and pyproject.toml for denizsafak/abogen",
-  "streaming skill card extraction with 300s timeout",
+  "正在生成 GitHub 搜索策略",
+  "搜索策略通过：epub pdf tts subtitle synchronized",
+  "GitHub 搜索返回 3 个标准化候选",
+  "候选评审批次 1/1 已完成",
+  "正在采集 denizsafak/abogen 的 README.md 和 pyproject.toml",
+  "正在以 300s 超时流式抽取仓库能力卡",
 ];
+
+const decisionLabels = {
+  keep: "保留",
+  review: "待复核",
+  reject: "排除",
+};
 
 const views = new Map(
   ["analyze", "detail", "reports", "settings"].map((name) => [name, document.querySelector(`#view-${name}`)]),
@@ -143,7 +151,7 @@ function renderTable() {
 
 function decisionBadge(decision) {
   const badgeClass = decision === "keep" ? "badge-success" : decision === "reject" ? "badge-reject" : "badge-warn";
-  return `<span class="badge ${badgeClass}">${decision}</span>`;
+  return `<span class="badge ${badgeClass}">${decisionLabels[decision] || decision}</span>`;
 }
 
 function selectCandidate(fullName) {
@@ -176,17 +184,17 @@ function copyReportJson() {
   const payload = {
     idea: document.querySelector("#idea-input").value.trim(),
     candidates: sampleCandidates,
-    recommendation: "Prefer reuse or fork of denizsafak/abogen first.",
+    recommendation: "优先复用或 fork denizsafak/abogen，再针对缺口做人工复核。",
   };
   navigator.clipboard?.writeText(JSON.stringify(payload, null, 2));
 }
 
 function downloadMarkdown() {
-  const markdown = `# RepoRadar Research Report
+  const markdown = `# RepoRadar 调研报告
 
-## Recommendation
+## 结论
 
-Prefer reuse or fork of denizsafak/abogen first, then validate gaps with manual review.
+优先复用或 fork denizsafak/abogen，再针对缺口做人工复核。
 `;
   const blob = new Blob([markdown], { type: "text/markdown" });
   const url = URL.createObjectURL(blob);
@@ -200,9 +208,7 @@ Prefer reuse or fork of denizsafak/abogen first, then validate gaps with manual 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const target = button.dataset.nav;
-    if (target === "reports") {
-      setView("reports");
-    } else if (target) {
+    if (target) {
       setView(target);
     }
   });
@@ -210,8 +216,7 @@ navButtons.forEach((button) => {
 
 document.querySelector("#run-analysis").addEventListener("click", showRun);
 document.querySelector("#load-sample").addEventListener("click", () => {
-  document.querySelector("#idea-input").value =
-    "I want to build a tool that converts EPUB/PDF files into TTS audio with synchronized subtitles.";
+  document.querySelector("#idea-input").value = sampleIdea;
 });
 document.querySelector("#cancel-run").addEventListener("click", showIdle);
 document.querySelector("#rerun-analysis").addEventListener("click", showRun);

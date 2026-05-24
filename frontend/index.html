@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,16 +9,14 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <a class="brand" href="#analyze" aria-label="RepoRadar home" data-nav="analyze">
-          <span class="brand-mark" aria-hidden="true">
-            <span></span>
-          </span>
+        <a class="brand" href="#analyze" aria-label="RepoRadar 首页" data-nav="analyze">
+          <span class="brand-mark" aria-hidden="true"><span></span></span>
           <span>RepoRadar</span>
         </a>
-        <nav class="topnav" aria-label="Primary navigation">
-          <button class="nav-link is-active" type="button" data-nav="analyze">Analyze</button>
-          <button class="nav-link" type="button" data-nav="reports">Reports</button>
-          <button class="nav-link" type="button" data-nav="settings">Settings</button>
+        <nav class="topnav" aria-label="主导航">
+          <button class="nav-link is-active" type="button" data-nav="analyze">分析</button>
+          <button class="nav-link" type="button" data-nav="reports">报告</button>
+          <button class="nav-link" type="button" data-nav="settings">设置</button>
         </nav>
       </header>
 
@@ -26,79 +24,72 @@
         <section class="view is-active" id="view-analyze" aria-labelledby="analyze-title">
           <div class="workspace analyze-layout" data-state="idle">
             <section class="panel input-panel">
-              <div class="section-heading">
-                <p class="eyebrow">Project idea</p>
-                <h1 id="analyze-title">Find reusable GitHub projects before building from scratch.</h1>
+              <div class="compact-heading">
+                <div>
+                  <p class="eyebrow">项目调研</p>
+                  <h1 id="analyze-title">开源复用分析工作台</h1>
+                </div>
+                <p>输入一个项目想法，快速得到 GitHub 候选、能力卡、评分和复用建议。</p>
               </div>
-              <label class="field-label" for="idea-input">Idea</label>
-              <textarea id="idea-input" rows="5">I want to build a tool that converts EPUB/PDF files into TTS audio with synchronized subtitles.</textarea>
+
+              <label class="field-label" for="idea-input">项目想法</label>
+              <textarea id="idea-input" rows="4">我想做一个把 EPUB/PDF 转成 TTS 音频，并生成同步字幕的工具。</textarea>
+
               <div class="form-grid">
                 <label>
-                  <span>Max repos</span>
+                  <span>候选数量</span>
                   <input id="max-repos" type="number" min="1" max="50" value="3" />
                 </label>
                 <label>
-                  <span>Card limit</span>
+                  <span>能力卡数量</span>
                   <input id="card-limit" type="number" min="0" max="20" value="1" />
                 </label>
                 <label>
-                  <span>Query mode</span>
+                  <span>搜索策略</span>
                   <select id="query-mode">
-                    <option>llm</option>
-                    <option>rules</option>
+                    <option>LLM</option>
+                    <option>规则</option>
                   </select>
                 </label>
                 <label>
-                  <span>Review mode</span>
+                  <span>候选评审</span>
                   <select id="review-mode">
-                    <option>llm</option>
-                    <option>none</option>
+                    <option>LLM</option>
+                    <option>关闭</option>
                   </select>
                 </label>
               </div>
-              <div class="toggle-row">
-                <label class="checkline">
-                  <input id="extract-cards" type="checkbox" checked />
-                  <span>Extract skill cards</span>
-                </label>
-                <label class="checkline">
-                  <input id="use-cache" type="checkbox" checked />
-                  <span>Use cache</span>
-                </label>
-              </div>
-              <div class="action-row">
-                <button class="button button-primary" id="run-analysis" type="button">
-                  Analyze idea
-                </button>
-                <button class="button button-secondary" id="load-sample" type="button">
-                  Load sample
-                </button>
+
+              <div class="bottom-bar">
+                <div class="toggle-row">
+                  <label class="checkline">
+                    <input id="extract-cards" type="checkbox" checked />
+                    <span>生成能力卡</span>
+                  </label>
+                  <label class="checkline">
+                    <input id="use-cache" type="checkbox" checked />
+                    <span>使用缓存</span>
+                  </label>
+                </div>
+                <div class="action-row">
+                  <button class="button button-secondary" id="load-sample" type="button">填入示例</button>
+                  <button class="button button-primary" id="run-analysis" type="button">开始分析</button>
+                </div>
               </div>
             </section>
 
             <aside class="panel setup-panel">
-              <h2>Run setup</h2>
+              <div class="section-toolbar">
+                <h2>运行配置</h2>
+                <span class="badge badge-success">可运行</span>
+              </div>
               <div class="status-list">
-                <div>
-                  <span>GitHub API</span>
-                  <strong class="badge badge-success">Connected</strong>
-                </div>
-                <div>
-                  <span>LLM API</span>
-                  <strong class="badge badge-success">Streaming</strong>
-                </div>
-                <div>
-                  <span>Timeout</span>
-                  <strong>300s</strong>
-                </div>
-                <div>
-                  <span>Cache</span>
-                  <strong>.reporadar_cache</strong>
-                </div>
+                <div><span>GitHub API</span><strong>已连接</strong></div>
+                <div><span>LLM API</span><strong>流式响应</strong></div>
+                <div><span>超时</span><strong>300s</strong></div>
+                <div><span>缓存目录</span><strong>.reporadar_cache</strong></div>
               </div>
-              <div class="hint-box">
-                The static MVP mirrors the CLI output shape and is ready for a future API or CLI bridge.
-              </div>
+              <div class="hint-box">当前是静态 UI 原型，页面结构按后端 CLI 输出形态设计，后续可接本地 API 或 CLI bridge。</div>
             </aside>
           </div>
 
@@ -106,17 +97,17 @@
             <section class="panel run-panel">
               <div class="run-header">
                 <div>
-                  <p class="eyebrow">Running analysis</p>
-                  <h2>EPUB/PDF to TTS with synchronized subtitles</h2>
+                  <p class="eyebrow">分析中</p>
+                  <h2>EPUB/PDF 转 TTS，并生成同步字幕</h2>
                 </div>
-                <button class="button button-secondary" id="cancel-run" type="button">Cancel run</button>
+                <button class="button button-secondary" id="cancel-run" type="button">取消</button>
               </div>
-              <ol class="pipeline" aria-label="Analysis pipeline">
-                <li class="is-done">Query planning</li>
-                <li class="is-done">GitHub search</li>
-                <li class="is-active">Candidate review</li>
-                <li>Skill cards</li>
-                <li>Report</li>
+              <ol class="pipeline" aria-label="分析流程">
+                <li class="is-done">生成搜索策略</li>
+                <li class="is-done">GitHub 搜索</li>
+                <li class="is-active">候选评审</li>
+                <li>能力卡</li>
+                <li>报告</li>
               </ol>
               <div class="progress-track" aria-hidden="true"><span></span></div>
               <div class="log-box" id="run-log" aria-live="polite"></div>
@@ -127,30 +118,30 @@
             <section class="panel results-panel">
               <div class="section-toolbar">
                 <div>
-                  <p class="eyebrow">Candidate repositories</p>
-                  <h2>3 matches reviewed</h2>
+                  <p class="eyebrow">候选仓库</p>
+                  <h2>已评审 3 个匹配项目</h2>
                 </div>
                 <div class="toolbar-actions">
-                  <button class="button button-secondary" type="button" id="rerun-analysis">Rerun</button>
-                  <button class="button button-primary" type="button" data-nav="reports">Generate report</button>
+                  <button class="button button-secondary" type="button" id="rerun-analysis">重新分析</button>
+                  <button class="button button-primary" type="button" data-nav="reports">生成报告</button>
                 </div>
               </div>
               <div class="filter-row">
-                <button class="chip is-active" type="button" data-filter="all">All</button>
-                <button class="chip" type="button" data-filter="keep">Keep</button>
-                <button class="chip" type="button" data-filter="review">Review</button>
-                <button class="chip" type="button" data-filter="reject">Reject</button>
+                <button class="chip is-active" type="button" data-filter="all">全部</button>
+                <button class="chip" type="button" data-filter="keep">保留</button>
+                <button class="chip" type="button" data-filter="review">待复核</button>
+                <button class="chip" type="button" data-filter="reject">排除</button>
               </div>
               <div class="table-wrap">
                 <table class="repo-table">
                   <thead>
                     <tr>
-                      <th>Repository</th>
-                      <th>Decision</th>
-                      <th>Score</th>
+                      <th>仓库</th>
+                      <th>决策</th>
+                      <th>评分</th>
                       <th>Stars</th>
-                      <th>Language</th>
-                      <th>Updated</th>
+                      <th>语言</th>
+                      <th>更新</th>
                     </tr>
                   </thead>
                   <tbody id="repo-table-body"></tbody>
@@ -159,16 +150,16 @@
             </section>
 
             <aside class="panel summary-panel">
-              <p class="eyebrow">Selected candidate</p>
+              <p class="eyebrow">当前候选</p>
               <h2 id="selected-repo-name">denizsafak/abogen</h2>
               <p id="selected-repo-summary"></p>
               <div class="metric-stack">
-                <div><span>Overall</span><strong id="selected-overall">0.974</strong></div>
-                <div><span>Relevance</span><strong id="selected-relevance">1.000</strong></div>
-                <div><span>Reuse</span><strong id="selected-reuse">1.000</strong></div>
-                <div><span>Docs</span><strong id="selected-docs">0.968</strong></div>
+                <div><span>综合</span><strong id="selected-overall">0.974</strong></div>
+                <div><span>相关性</span><strong id="selected-relevance">1.000</strong></div>
+                <div><span>复用性</span><strong id="selected-reuse">1.000</strong></div>
+                <div><span>文档</span><strong id="selected-docs">0.968</strong></div>
               </div>
-              <button class="button button-primary full-width" type="button" id="open-detail">Open skill card</button>
+              <button class="button button-primary full-width" type="button" id="open-detail">查看能力卡</button>
             </aside>
           </div>
         </section>
@@ -176,70 +167,70 @@
         <section class="view" id="view-detail" aria-labelledby="detail-title">
           <div class="workspace detail-layout">
             <section class="panel repo-profile">
-              <button class="link-button" type="button" data-nav="analyze">Back to results</button>
+              <button class="link-button" type="button" data-nav="analyze">返回候选列表</button>
               <h1 id="detail-title">denizsafak/abogen</h1>
               <p class="repo-url">github.com/denizsafak/abogen</p>
-              <p>Generate audiobooks from EPUBs, PDFs and text with synchronized captions.</p>
+              <p>从 EPUB、PDF 和文本生成有声书，并输出同步字幕。</p>
               <div class="tag-row">
                 <span>Python</span>
                 <span>MIT</span>
-                <span>audiobook</span>
-                <span>tts</span>
-                <span>subtitles</span>
-                <span>epub</span>
+                <span>有声书</span>
+                <span>TTS</span>
+                <span>字幕</span>
+                <span>EPUB</span>
               </div>
-              <h2>Score breakdown</h2>
+              <h2>评分拆解</h2>
               <div class="score-list" id="score-list"></div>
-              <h2>Evidence</h2>
+              <h2>证据</h2>
               <div class="evidence-card">
                 <span>README.md</span>
-                <blockquote>Drag and drop any ePub, PDF, text, markdown, or subtitle file.</blockquote>
-                <strong>Confidence 0.95</strong>
+                <blockquote>支持拖入 ePub、PDF、文本、Markdown 或字幕文件。</blockquote>
+                <strong>置信度 0.95</strong>
               </div>
             </section>
 
             <section class="panel skill-card">
               <div class="section-toolbar">
                 <div>
-                  <p class="eyebrow">Repo Skill Card</p>
-                  <h2>Capability profile</h2>
+                  <p class="eyebrow">仓库能力卡</p>
+                  <h2>能力画像</h2>
                 </div>
-                <span class="confidence-pill">Confidence 0.900</span>
+                <span class="confidence-pill">置信度 0.900</span>
               </div>
               <div class="property-table">
-                <div><span>Categories</span><strong>text-to-speech, audiobook-generation, subtitle-sync</strong></div>
-                <div><span>Inputs</span><strong>EPUB, PDF, TXT, Markdown, SRT</strong></div>
-                <div><span>Outputs</span><strong>WAV, FLAC, MP3, OPUS, M4B, SRT</strong></div>
-                <div><span>Interfaces</span><strong>CLI, Web, API</strong></div>
-                <div><span>Model providers</span><strong>Kokoro, Supertonic</strong></div>
-                <div><span>Deployment</span><strong>pip, docker, self-hosted</strong></div>
+                <div><span>类别</span><strong>文本转语音、有声书生成、字幕同步</strong></div>
+                <div><span>输入</span><strong>EPUB、PDF、TXT、Markdown、SRT</strong></div>
+                <div><span>输出</span><strong>WAV、FLAC、MP3、OPUS、M4B、SRT</strong></div>
+                <div><span>接口</span><strong>CLI、Web、API</strong></div>
+                <div><span>模型提供方</span><strong>Kokoro、Supertonic</strong></div>
+                <div><span>部署</span><strong>pip、docker、自托管</strong></div>
               </div>
               <div class="capability-grid">
                 <article>
-                  <h3>Core capabilities</h3>
+                  <h3>核心能力</h3>
                   <ul>
-                    <li>Text-to-speech conversion</li>
-                    <li>Multi-format ebook input</li>
-                    <li>Synchronized subtitle generation</li>
-                    <li>Chapter-aware audiobook output</li>
-                    <li>Batch queue processing</li>
+                    <li>文本转语音生成</li>
+                    <li>多格式电子书输入</li>
+                    <li>同步字幕生成</li>
+                    <li>按章节输出有声书</li>
+                    <li>批量队列处理</li>
                   </ul>
                 </article>
                 <article>
-                  <h3>Optional capabilities</h3>
+                  <h3>可选能力</h3>
                   <ul>
-                    <li>LLM-assisted text normalization</li>
-                    <li>Audiobookshelf integration</li>
-                    <li>GPU acceleration</li>
+                    <li>LLM 文本规范化</li>
+                    <li>Audiobookshelf 集成</li>
+                    <li>GPU 加速</li>
                   </ul>
                 </article>
               </div>
               <div class="limitations">
-                <h3>Limitations</h3>
+                <h3>限制</h3>
                 <ul>
-                  <li>Word-level subtitles only for English</li>
-                  <li>OCR for scanned PDFs not implemented</li>
-                  <li>AMD GPU acceleration requires Linux ROCm</li>
+                  <li>词级字幕仅支持英文</li>
+                  <li>暂不支持扫描 PDF 的 OCR</li>
+                  <li>AMD GPU 加速依赖 Linux ROCm</li>
                 </ul>
               </div>
             </section>
@@ -249,18 +240,18 @@
         <section class="view" id="view-reports" aria-labelledby="reports-title">
           <div class="report-shell">
             <aside class="report-nav panel">
-              <h2>Report sections</h2>
-              <button class="report-link is-active" type="button">User Idea</button>
-              <button class="report-link" type="button">Search Strategy</button>
-              <button class="report-link" type="button">Candidate Overview</button>
-              <button class="report-link" type="button">Top Project Skill Cards</button>
-              <button class="report-link" type="button">Capability Comparison</button>
-              <button class="report-link" type="button">Implementation Signals</button>
-              <button class="report-link" type="button">Reuse vs Build Analysis</button>
-              <button class="report-link" type="button">Recommendation</button>
+              <h2>报告目录</h2>
+              <button class="report-link is-active" type="button">用户想法</button>
+              <button class="report-link" type="button">搜索策略</button>
+              <button class="report-link" type="button">候选总览</button>
+              <button class="report-link" type="button">Top 能力卡</button>
+              <button class="report-link" type="button">能力对比</button>
+              <button class="report-link" type="button">实现信号</button>
+              <button class="report-link" type="button">复用与自研</button>
+              <button class="report-link" type="button">结论</button>
               <div class="report-meta">
-                <span>Report generated</span>
-                <strong>May 25, 2026 10:15 AM</strong>
+                <span>生成时间</span>
+                <strong>2026-05-25 10:15</strong>
                 <span>Run ID</span>
                 <code>run_20260525_101523</code>
               </div>
@@ -268,103 +259,99 @@
 
             <section class="panel report-preview">
               <div class="section-toolbar">
-                <h1 id="reports-title">RepoRadar Research Report</h1>
+                <h1 id="reports-title">RepoRadar 调研报告</h1>
                 <div class="toolbar-actions">
-                  <button class="button button-secondary" id="export-markdown" type="button">Export Markdown</button>
-                  <button class="button button-secondary" id="copy-json" type="button">Copy JSON</button>
-                  <button class="button button-primary" type="button">Open report</button>
+                  <button class="button button-secondary" id="export-markdown" type="button">导出 Markdown</button>
+                  <button class="button button-secondary" id="copy-json" type="button">复制 JSON</button>
+                  <button class="button button-primary" type="button">打开报告</button>
                 </div>
               </div>
               <article class="report-document">
-                <h2>1. User Idea</h2>
-                <p>I want to build a tool that converts EPUB/PDF files into TTS audio with synchronized subtitles.</p>
-                <h2>2. Search Strategy</h2>
+                <h2>1. 用户想法</h2>
+                <p>我想做一个把 EPUB/PDF 转成 TTS 音频，并生成同步字幕的工具。</p>
+                <h2>2. 搜索策略</h2>
                 <div class="query-row">
                   <code>epub pdf tts subtitle synchronized</code>
                   <code>audiobook generator subtitle sync</code>
                 </div>
-                <h2>3. Candidate Overview</h2>
+                <h2>3. 候选总览</h2>
                 <table class="report-table">
                   <thead>
-                    <tr><th>Repo</th><th>Decision</th><th>Review</th><th>Score</th><th>Reuse</th><th>Docs</th></tr>
+                    <tr><th>仓库</th><th>决策</th><th>评审</th><th>评分</th><th>复用</th><th>文档</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td>denizsafak/abogen</td><td><span class="badge badge-success">keep</span></td><td>Directly matches EPUB/PDF to TTS</td><td>0.974</td><td>1.000</td><td>0.968</td></tr>
-                    <tr><td>lukaszliniewicz/Pandrator</td><td><span class="badge badge-success">keep</span></td><td>Similar audiobook workflow</td><td>0.716</td><td>0.250</td><td>0.000</td></tr>
-                    <tr><td>BoltzmannEntropy/MimikaStudio</td><td><span class="badge badge-warn">review</span></td><td>Weaker subtitle evidence</td><td>0.582</td><td>0.250</td><td>0.000</td></tr>
+                    <tr><td>denizsafak/abogen</td><td><span class="badge badge-success">保留</span></td><td>直接匹配 EPUB/PDF 转 TTS 和同步字幕</td><td>0.974</td><td>1.000</td><td>0.968</td></tr>
+                    <tr><td>lukaszliniewicz/Pandrator</td><td><span class="badge badge-success">保留</span></td><td>相似的有声书工作流</td><td>0.716</td><td>0.250</td><td>0.000</td></tr>
+                    <tr><td>BoltzmannEntropy/MimikaStudio</td><td><span class="badge badge-warn">待复核</span></td><td>字幕证据较弱</td><td>0.582</td><td>0.250</td><td>0.000</td></tr>
                   </tbody>
                 </table>
-                <h2>4. Top Project Skill Card</h2>
+                <h2>4. Top 项目能力卡</h2>
                 <div class="inline-skill">
                   <strong>denizsafak/abogen</strong>
-                  <span>Inputs: EPUB, PDF, TXT, Markdown, SRT</span>
-                  <span>Outputs: WAV, MP3, OPUS, M4B, SRT</span>
-                  <span>Interfaces: CLI, Web, API</span>
+                  <span>输入：EPUB、PDF、TXT、Markdown、SRT</span>
+                  <span>输出：WAV、MP3、OPUS、M4B、SRT</span>
+                  <span>接口：CLI、Web、API</span>
                 </div>
-                <h2>5. Recommendation</h2>
-                <div class="recommendation">Prefer reuse or fork of denizsafak/abogen first, then validate gaps with manual review.</div>
+                <h2>5. 结论</h2>
+                <div class="recommendation">优先复用或 fork denizsafak/abogen，再针对缺口做人工复核。</div>
               </article>
             </section>
           </div>
         </section>
 
         <section class="view" id="view-settings" aria-labelledby="settings-title">
-          <div class="settings-shell">
-            <aside class="side-nav panel" aria-label="Settings navigation">
-              <button class="side-link is-active" type="button">Analyze</button>
-              <button class="side-link" type="button">Reports</button>
-              <button class="side-link" type="button">Settings</button>
-              <div class="side-footer">
-                <button class="side-link" type="button">Documentation</button>
-                <button class="side-link" type="button">Feedback</button>
-                <button class="side-link" type="button">Light mode</button>
+          <div class="workspace settings-page">
+            <div class="settings-heading">
+              <div>
+                <p class="eyebrow">运行环境</p>
+                <h1 id="settings-title">设置</h1>
               </div>
-            </aside>
+              <p>这里展示当前本地运行配置。真实密钥只从 .env 或环境变量读取，界面不会完整显示。</p>
+            </div>
             <section class="settings-grid">
               <article class="panel settings-card">
-                <h2 id="settings-title">GitHub API</h2>
+                <h2>GitHub API</h2>
                 <dl>
-                  <div><dt>Status</dt><dd><span class="badge badge-success">Connected</span></dd></div>
-                  <div><dt>API base URL</dt><dd>https://api.github.com</dd></div>
+                  <div><dt>状态</dt><dd><span class="badge badge-success">已连接</span></dd></div>
+                  <div><dt>API 地址</dt><dd>https://api.github.com</dd></div>
                   <div><dt>Token</dt><dd>ghp_************</dd></div>
                 </dl>
-                <button class="button button-secondary" type="button">Test connection</button>
+                <button class="button button-secondary" type="button">测试连接</button>
               </article>
               <article class="panel settings-card">
                 <h2>LLM API</h2>
                 <dl>
                   <div><dt>Provider</dt><dd>OpenAI-compatible</dd></div>
-                  <div><dt>Model</dt><dd>from .env</dd></div>
-                  <div><dt>Streaming</dt><dd class="success-text">enabled</dd></div>
-                  <div><dt>Timeout</dt><dd>300s</dd></div>
+                  <div><dt>模型</dt><dd>来自 .env</dd></div>
+                  <div><dt>流式响应</dt><dd class="success-text">已启用</dd></div>
+                  <div><dt>超时</dt><dd>300s</dd></div>
                   <div><dt>Temperature</dt><dd>0.1</dd></div>
                 </dl>
-                <button class="button button-secondary" type="button">Test completion</button>
+                <button class="button button-secondary" type="button">测试补全</button>
               </article>
               <article class="panel settings-card">
-                <h2>Cache</h2>
+                <h2>缓存</h2>
                 <dl>
-                  <div><dt>Cache directory</dt><dd>.reporadar_cache</dd></div>
-                  <div><dt>Cached searches</dt><dd>12</dd></div>
-                  <div><dt>Cached repo collections</dt><dd>3</dd></div>
-                  <div><dt>Cached skill cards</dt><dd>1</dd></div>
+                  <div><dt>缓存目录</dt><dd>.reporadar_cache</dd></div>
+                  <div><dt>搜索缓存</dt><dd>12</dd></div>
+                  <div><dt>仓库采集缓存</dt><dd>3</dd></div>
+                  <div><dt>能力卡缓存</dt><dd>1</dd></div>
                 </dl>
                 <div class="split-actions">
-                  <button class="button button-danger" type="button">Clear cache</button>
-                  <button class="button button-secondary" type="button">Open cache folder</button>
+                  <button class="button button-danger" type="button">清理缓存</button>
+                  <button class="button button-secondary" type="button">打开目录</button>
                 </div>
               </article>
               <article class="panel settings-card">
-                <h2>Runtime</h2>
+                <h2>运行检查</h2>
                 <dl>
                   <div><dt>Python</dt><dd>3.14</dd></div>
-                  <div><dt>Tests</dt><dd><span class="badge badge-success">passing</span></dd></div>
-                  <div><dt>Last live smoke</dt><dd><span class="badge badge-success">success</span></dd></div>
-                  <div><dt>Last report export</dt><dd><span class="badge badge-success">success</span></dd></div>
-                  <div><dt>Version</dt><dd>0.1.0</dd></div>
+                  <div><dt>测试</dt><dd><span class="badge badge-success">通过</span></dd></div>
+                  <div><dt>最近 live smoke</dt><dd><span class="badge badge-success">成功</span></dd></div>
+                  <div><dt>最近报告导出</dt><dd><span class="badge badge-success">成功</span></dd></div>
+                  <div><dt>版本</dt><dd>0.1.0</dd></div>
                 </dl>
               </article>
-              <p class="settings-note">Secrets are read from .env or environment variables. Tokens are never shown in full.</p>
             </section>
           </div>
         </section>
