@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RepoRadar</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#analyze" aria-label="RepoRadar home" data-nav="analyze">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span>
+          </span>
+          <span>RepoRadar</span>
+        </a>
+        <nav class="topnav" aria-label="Primary navigation">
+          <button class="nav-link is-active" type="button" data-nav="analyze">Analyze</button>
+          <button class="nav-link" type="button" data-nav="reports">Reports</button>
+          <button class="nav-link" type="button" data-nav="settings">Settings</button>
+        </nav>
+      </header>
+
+      <main>
+        <section class="view is-active" id="view-analyze" aria-labelledby="analyze-title">
+          <div class="workspace analyze-layout" data-state="idle">
+            <section class="panel input-panel">
+              <div class="section-heading">
+                <p class="eyebrow">Project idea</p>
+                <h1 id="analyze-title">Find reusable GitHub projects before building from scratch.</h1>
+              </div>
+              <label class="field-label" for="idea-input">Idea</label>
+              <textarea id="idea-input" rows="5">I want to build a tool that converts EPUB/PDF files into TTS audio with synchronized subtitles.</textarea>
+              <div class="form-grid">
+                <label>
+                  <span>Max repos</span>
+                  <input id="max-repos" type="number" min="1" max="50" value="3" />
+                </label>
+                <label>
+                  <span>Card limit</span>
+                  <input id="card-limit" type="number" min="0" max="20" value="1" />
+                </label>
+                <label>
+                  <span>Query mode</span>
+                  <select id="query-mode">
+                    <option>llm</option>
+                    <option>rules</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Review mode</span>
+                  <select id="review-mode">
+                    <option>llm</option>
+                    <option>none</option>
+                  </select>
+                </label>
+              </div>
+              <div class="toggle-row">
+                <label class="checkline">
+                  <input id="extract-cards" type="checkbox" checked />
+                  <span>Extract skill cards</span>
+                </label>
+                <label class="checkline">
+                  <input id="use-cache" type="checkbox" checked />
+                  <span>Use cache</span>
+                </label>
+              </div>
+              <div class="action-row">
+                <button class="button button-primary" id="run-analysis" type="button">
+                  Analyze idea
+                </button>
+                <button class="button button-secondary" id="load-sample" type="button">
+                  Load sample
+                </button>
+              </div>
+            </section>
+
+            <aside class="panel setup-panel">
+              <h2>Run setup</h2>
+              <div class="status-list">
+                <div>
+                  <span>GitHub API</span>
+                  <strong class="badge badge-success">Connected</strong>
+                </div>
+                <div>
+                  <span>LLM API</span>
+                  <strong class="badge badge-success">Streaming</strong>
+                </div>
+                <div>
+                  <span>Timeout</span>
+                  <strong>300s</strong>
+                </div>
+                <div>
+                  <span>Cache</span>
+                  <strong>.reporadar_cache</strong>
+                </div>
+              </div>
+              <div class="hint-box">
+                The static MVP mirrors the CLI output shape and is ready for a future API or CLI bridge.
+              </div>
+            </aside>
+          </div>
+
+          <div class="workspace run-layout" hidden>
+            <section class="panel run-panel">
+              <div class="run-header">
+                <div>
+                  <p class="eyebrow">Running analysis</p>
+                  <h2>EPUB/PDF to TTS with synchronized subtitles</h2>
+                </div>
+                <button class="button button-secondary" id="cancel-run" type="button">Cancel run</button>
+              </div>
+              <ol class="pipeline" aria-label="Analysis pipeline">
+                <li class="is-done">Query planning</li>
+                <li class="is-done">GitHub search</li>
+                <li class="is-active">Candidate review</li>
+                <li>Skill cards</li>
+                <li>Report</li>
+              </ol>
+              <div class="progress-track" aria-hidden="true"><span></span></div>
+              <div class="log-box" id="run-log" aria-live="polite"></div>
+            </section>
+          </div>
+
+          <div class="workspace results-layout" hidden>
+            <section class="panel results-panel">
+              <div class="section-toolbar">
+                <div>
+                  <p class="eyebrow">Candidate repositories</p>
+                  <h2>3 matches reviewed</h2>
+                </div>
+                <div class="toolbar-actions">
+                  <button class="button button-secondary" type="button" id="rerun-analysis">Rerun</button>
+                  <button class="button button-primary" type="button" data-nav="reports">Generate report</button>
+                </div>
+              </div>
+              <div class="filter-row">
+                <button class="chip is-active" type="button" data-filter="all">All</button>
+                <button class="chip" type="button" data-filter="keep">Keep</button>
+                <button class="chip" type="button" data-filter="review">Review</button>
+                <button class="chip" type="button" data-filter="reject">Reject</button>
+              </div>
+              <div class="table-wrap">
+                <table class="repo-table">
+                  <thead>
+                    <tr>
+                      <th>Repository</th>
+                      <th>Decision</th>
+                      <th>Score</th>
+                      <th>Stars</th>
+                      <th>Language</th>
+                      <th>Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody id="repo-table-body"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <aside class="panel summary-panel">
+              <p class="eyebrow">Selected candidate</p>
+              <h2 id="selected-repo-name">denizsafak/abogen</h2>
+              <p id="selected-repo-summary"></p>
+              <div class="metric-stack">
+                <div><span>Overall</span><strong id="selected-overall">0.974</strong></div>
+                <div><span>Relevance</span><strong id="selected-relevance">1.000</strong></div>
+                <div><span>Reuse</span><strong id="selected-reuse">1.000</strong></div>
+                <div><span>Docs</span><strong id="selected-docs">0.968</strong></div>
+              </div>
+              <button class="button button-primary full-width" type="button" id="open-detail">Open skill card</button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="view-detail" aria-labelledby="detail-title">
+          <div class="workspace detail-layout">
+            <section class="panel repo-profile">
+              <button class="link-button" type="button" data-nav="analyze">Back to results</button>
+              <h1 id="detail-title">denizsafak/abogen</h1>
+              <p class="repo-url">github.com/denizsafak/abogen</p>
+              <p>Generate audiobooks from EPUBs, PDFs and text with synchronized captions.</p>
+              <div class="tag-row">
+                <span>Python</span>
+                <span>MIT</span>
+                <span>audiobook</span>
+                <span>tts</span>
+                <span>subtitles</span>
+                <span>epub</span>
+              </div>
+              <h2>Score breakdown</h2>
+              <div class="score-list" id="score-list"></div>
+              <h2>Evidence</h2>
+              <div class="evidence-card">
+                <span>README.md</span>
+                <blockquote>Drag and drop any ePub, PDF, text, markdown, or subtitle file.</blockquote>
+                <strong>Confidence 0.95</strong>
+              </div>
+            </section>
+
+            <section class="panel skill-card">
+              <div class="section-toolbar">
+                <div>
+                  <p class="eyebrow">Repo Skill Card</p>
+                  <h2>Capability profile</h2>
+                </div>
+                <span class="confidence-pill">Confidence 0.900</span>
+              </div>
+              <div class="property-table">
+                <div><span>Categories</span><strong>text-to-speech, audiobook-generation, subtitle-sync</strong></div>
+                <div><span>Inputs</span><strong>EPUB, PDF, TXT, Markdown, SRT</strong></div>
+                <div><span>Outputs</span><strong>WAV, FLAC, MP3, OPUS, M4B, SRT</strong></div>
+                <div><span>Interfaces</span><strong>CLI, Web, API</strong></div>
+                <div><span>Model providers</span><strong>Kokoro, Supertonic</strong></div>
+                <div><span>Deployment</span><strong>pip, docker, self-hosted</strong></div>
+              </div>
+              <div class="capability-grid">
+                <article>
+                  <h3>Core capabilities</h3>
+                  <ul>
+                    <li>Text-to-speech conversion</li>
+                    <li>Multi-format ebook input</li>
+                    <li>Synchronized subtitle generation</li>
+                    <li>Chapter-aware audiobook output</li>
+                    <li>Batch queue processing</li>
+                  </ul>
+                </article>
+                <article>
+                  <h3>Optional capabilities</h3>
+                  <ul>
+                    <li>LLM-assisted text normalization</li>
+                    <li>Audiobookshelf integration</li>
+                    <li>GPU acceleration</li>
+                  </ul>
+                </article>
+              </div>
+              <div class="limitations">
+                <h3>Limitations</h3>
+                <ul>
+                  <li>Word-level subtitles only for English</li>
+                  <li>OCR for scanned PDFs not implemented</li>
+                  <li>AMD GPU acceleration requires Linux ROCm</li>
+                </ul>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-reports" aria-labelledby="reports-title">
+          <div class="report-shell">
+            <aside class="report-nav panel">
+              <h2>Report sections</h2>
+              <button class="report-link is-active" type="button">User Idea</button>
+              <button class="report-link" type="button">Search Strategy</button>
+              <button class="report-link" type="button">Candidate Overview</button>
+              <button class="report-link" type="button">Top Project Skill Cards</button>
+              <button class="report-link" type="button">Capability Comparison</button>
+              <button class="report-link" type="button">Implementation Signals</button>
+              <button class="report-link" type="button">Reuse vs Build Analysis</button>
+              <button class="report-link" type="button">Recommendation</button>
+              <div class="report-meta">
+                <span>Report generated</span>
+                <strong>May 25, 2026 10:15 AM</strong>
+                <span>Run ID</span>
+                <code>run_20260525_101523</code>
+              </div>
+            </aside>
+
+            <section class="panel report-preview">
+              <div class="section-toolbar">
+                <h1 id="reports-title">RepoRadar Research Report</h1>
+                <div class="toolbar-actions">
+                  <button class="button button-secondary" id="export-markdown" type="button">Export Markdown</button>
+                  <button class="button button-secondary" id="copy-json" type="button">Copy JSON</button>
+                  <button class="button button-primary" type="button">Open report</button>
+                </div>
+              </div>
+              <article class="report-document">
+                <h2>1. User Idea</h2>
+                <p>I want to build a tool that converts EPUB/PDF files into TTS audio with synchronized subtitles.</p>
+                <h2>2. Search Strategy</h2>
+                <div class="query-row">
+                  <code>epub pdf tts subtitle synchronized</code>
+                  <code>audiobook generator subtitle sync</code>
+                </div>
+                <h2>3. Candidate Overview</h2>
+                <table class="report-table">
+                  <thead>
+                    <tr><th>Repo</th><th>Decision</th><th>Review</th><th>Score</th><th>Reuse</th><th>Docs</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>denizsafak/abogen</td><td><span class="badge badge-success">keep</span></td><td>Directly matches EPUB/PDF to TTS</td><td>0.974</td><td>1.000</td><td>0.968</td></tr>
+                    <tr><td>lukaszliniewicz/Pandrator</td><td><span class="badge badge-success">keep</span></td><td>Similar audiobook workflow</td><td>0.716</td><td>0.250</td><td>0.000</td></tr>
+                    <tr><td>BoltzmannEntropy/MimikaStudio</td><td><span class="badge badge-warn">review</span></td><td>Weaker subtitle evidence</td><td>0.582</td><td>0.250</td><td>0.000</td></tr>
+                  </tbody>
+                </table>
+                <h2>4. Top Project Skill Card</h2>
+                <div class="inline-skill">
+                  <strong>denizsafak/abogen</strong>
+                  <span>Inputs: EPUB, PDF, TXT, Markdown, SRT</span>
+                  <span>Outputs: WAV, MP3, OPUS, M4B, SRT</span>
+                  <span>Interfaces: CLI, Web, API</span>
+                </div>
+                <h2>5. Recommendation</h2>
+                <div class="recommendation">Prefer reuse or fork of denizsafak/abogen first, then validate gaps with manual review.</div>
+              </article>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-settings" aria-labelledby="settings-title">
+          <div class="settings-shell">
+            <aside class="side-nav panel" aria-label="Settings navigation">
+              <button class="side-link is-active" type="button">Analyze</button>
+              <button class="side-link" type="button">Reports</button>
+              <button class="side-link" type="button">Settings</button>
+              <div class="side-footer">
+                <button class="side-link" type="button">Documentation</button>
+                <button class="side-link" type="button">Feedback</button>
+                <button class="side-link" type="button">Light mode</button>
+              </div>
+            </aside>
+            <section class="settings-grid">
+              <article class="panel settings-card">
+                <h2 id="settings-title">GitHub API</h2>
+                <dl>
+                  <div><dt>Status</dt><dd><span class="badge badge-success">Connected</span></dd></div>
+                  <div><dt>API base URL</dt><dd>https://api.github.com</dd></div>
+                  <div><dt>Token</dt><dd>ghp_************</dd></div>
+                </dl>
+                <button class="button button-secondary" type="button">Test connection</button>
+              </article>
+              <article class="panel settings-card">
+                <h2>LLM API</h2>
+                <dl>
+                  <div><dt>Provider</dt><dd>OpenAI-compatible</dd></div>
+                  <div><dt>Model</dt><dd>from .env</dd></div>
+                  <div><dt>Streaming</dt><dd class="success-text">enabled</dd></div>
+                  <div><dt>Timeout</dt><dd>300s</dd></div>
+                  <div><dt>Temperature</dt><dd>0.1</dd></div>
+                </dl>
+                <button class="button button-secondary" type="button">Test completion</button>
+              </article>
+              <article class="panel settings-card">
+                <h2>Cache</h2>
+                <dl>
+                  <div><dt>Cache directory</dt><dd>.reporadar_cache</dd></div>
+                  <div><dt>Cached searches</dt><dd>12</dd></div>
+                  <div><dt>Cached repo collections</dt><dd>3</dd></div>
+                  <div><dt>Cached skill cards</dt><dd>1</dd></div>
+                </dl>
+                <div class="split-actions">
+                  <button class="button button-danger" type="button">Clear cache</button>
+                  <button class="button button-secondary" type="button">Open cache folder</button>
+                </div>
+              </article>
+              <article class="panel settings-card">
+                <h2>Runtime</h2>
+                <dl>
+                  <div><dt>Python</dt><dd>3.14</dd></div>
+                  <div><dt>Tests</dt><dd><span class="badge badge-success">passing</span></dd></div>
+                  <div><dt>Last live smoke</dt><dd><span class="badge badge-success">success</span></dd></div>
+                  <div><dt>Last report export</dt><dd><span class="badge badge-success">success</span></dd></div>
+                  <div><dt>Version</dt><dd>0.1.0</dd></div>
+                </dl>
+              </article>
+              <p class="settings-note">Secrets are read from .env or environment variables. Tokens are never shown in full.</p>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,10 +1,21 @@
-"""Streamlit UI placeholder for MVP phase 4."""
+"""Compatibility entry point for the frontend MVP.
+
+The current UI is dependency-free static HTML/CSS/JavaScript in
+``frontend/index.html``. This module remains as a small pointer for users who
+still run the old Streamlit placeholder path.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
 
 
 def main() -> None:
-    print("RepoRadar Streamlit UI belongs to MVP phase 4.")
+    """Print the static frontend entry file path."""
+
+    entry = Path(__file__).with_name("index.html")
+    print(f"RepoRadar frontend MVP: open {entry}")
 
 
 if __name__ == "__main__":
     main()
-

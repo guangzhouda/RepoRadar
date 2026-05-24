@@ -30,6 +30,7 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - `scripts/export_report.py` 可把分析 JSON 导出为 Markdown 对比报告。
 - DeepSeek / OpenAI 兼容 LLM 的通用配置项。
 - OpenAI-compatible LLM 调用使用流式响应读取，默认 timeout 为 300 秒，适配长上下文能力卡抽取。
+- `frontend/index.html` 提供零依赖静态 UI MVP，覆盖 idea 输入、运行状态、候选列表、能力卡、报告预览和设置页。
 - 标准库 `unittest` bootstrap 测试。
 
 部分实现：
@@ -42,7 +43,7 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 
 - 最终 CLI 输出格式是否同时包含 JSON 和 Markdown。
 - 是否使用 `unittest` 继续扩展，还是切换到 `pytest`。
-- Streamlit demo 是否在 v0.1 后立即推进，规划文档将其列为第 4 阶段。
+- 静态 UI MVP 后续是接入本地 API/CLI bridge，还是切换到 Streamlit/FastAPI。
 
 ## Quick Start
 
@@ -110,6 +111,12 @@ py -3.14 scripts\analyze_idea.py --idea "I want to build a tool that converts EP
 py -3.14 scripts\export_report.py --input .reporadar_cache\live-analysis.json --output .reporadar_cache\live-report.md
 ```
 
+本地打开静态 UI MVP：
+
+```powershell
+Invoke-Item frontend\index.html
+```
+
 ## Configuration
 
 `.env.example` 包含当前支持的配置项：
@@ -131,7 +138,7 @@ app/        应用代码；按 api/core/models/services/providers/db 分层
 scripts/    命令行入口；只做参数解析、调用 service 和输出
 tests/      标准库 unittest 测试
 examples/   示例输入和示例报告
-frontend/   Streamlit UI 占位
+frontend/   零依赖静态 UI MVP，后续接入 CLI/API
 docs/       本地规划/交接文档，不进入版本控制
 ```
 
@@ -194,6 +201,7 @@ Lint / format / build：
 - `app/services/evidence_verifier.py` 实现确定性 evidence quality 检查。
 - `app/services/scoring.py` 实现初版综合评分并使用 evidence verifier 调整 documentation score。
 - `app/services/reuse_advisor.py` 生成复用/自研建议，`app/services/report_generator.py` 和 `scripts/export_report.py` 实现 Markdown 报告导出。
+- `frontend/index.html`、`frontend/styles.css` 和 `frontend/app.js` 提供可直接打开的静态前端原型，目前使用示例数据模拟 CLI 结果。
 - 测试覆盖配置读取、query generation、候选标准化、搜索去重、idea 分析编排、仓库内容收集、能力卡抽取、evidence verification、评分和报告生成。
 
 规划文档中的 v0.1 验收目标已具备 CLI 路径，但仍需更多 live 验证：输入 TTS audiobook idea 后，搜索候选项目，批量生成能力卡，导出 Markdown 对比报告，并给出是否建议从零做的判断。
