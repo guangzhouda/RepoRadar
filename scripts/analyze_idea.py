@@ -33,6 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-repos", type=int, default=10, help="Planned repository limit.")
     parser.add_argument("--max-queries", type=int, default=6, help="Maximum GitHub search queries to generate.")
     parser.add_argument("--format", choices=("json", "markdown"), default="json", help="Output format.")
+    parser.add_argument("--output", help="Optional path for writing the full JSON payload.")
     parser.add_argument("--offline", action="store_true", help="Only generate search queries without calling GitHub.")
     parser.add_argument("--no-cache", action="store_true", help="Disable local GitHub search cache.")
     parser.add_argument(
@@ -207,10 +208,14 @@ def main() -> int:
             return 1
 
     payload["markdown"] = build_markdown(args.idea.strip(), payload["candidates"])
+    output = json.dumps(payload, indent=2, ensure_ascii=False)
+    if args.output:
+        Path(args.output).write_text(output, encoding="utf-8")
+
     if args.format == "markdown":
         print(payload["markdown"])
     else:
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        print(output)
     return 0
 
 

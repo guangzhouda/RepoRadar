@@ -22,14 +22,16 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - 候选列表保留 `reject` 项用于人工审查，不在展示层直接隐藏。
 - `scripts/fetch_repo.py` 的 Phase 2 仓库抓取 CLI，可抓取仓库元数据和 MVP README/docs/config 文件。
 - LLM Repo Skill Card 抽取，输出项目类别、输入/输出格式、接口形态、核心能力、限制、证据和置信度。
+- Phase 3 评分引擎，按 relevance、maturity、activity、reusability、documentation、license 生成综合分。
+- `scripts/export_report.py` 可把分析 JSON 导出为 Markdown 对比报告。
 - DeepSeek / OpenAI 兼容 LLM 的通用配置项。
 - 标准库 `unittest` bootstrap 测试。
 
 部分实现：
 
 - Query understanding 的规则实现仍保留为 `--query-mode rules` 诊断 fallback，默认路径已经使用 LLM。
-- Repo Skill Card 已有单仓库抽取 CLI，但还没有接入批量候选分析流水线。
-- 报告、证据校验、评分模块仍是后续阶段占位。
+- Repo Skill Card 已接入批量候选分析流水线，但仍是 `--extract-cards` opt-in。
+- Evidence verifier 仍是后续阶段占位。
 
 待确认：
 
@@ -87,6 +89,13 @@ py -3.14 scripts\fetch_repo.py --repo denizsafak/abogen --extract-card
 
 ```powershell
 py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 5 --extract-cards --card-limit 2
+```
+
+把分析 JSON 导出为 Markdown 对比报告：
+
+```powershell
+py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 5 --extract-cards --card-limit 2 --output analysis.json
+py -3.14 scripts\export_report.py --input analysis.json --output report.md
 ```
 
 ## Configuration
@@ -158,7 +167,7 @@ Lint / format / build：
 
 ## Current Status
 
-项目处于 Phase 1 CLI 搜索闭环已实现、Phase 2 单仓库 README 抓取与 LLM 能力卡生成已实现的状态。
+项目处于 Phase 1 CLI 搜索闭环、Phase 2 仓库抓取/能力卡生成、Phase 3 初版评分与 Markdown 报告导出已实现的状态。
 
 依据：
 
@@ -169,10 +178,11 @@ Lint / format / build：
 - `app/services/github_search.py` 实现候选标准化、去重、排序和缓存。
 - `scripts/fetch_repo.py`、`app/services/repo_collector.py` 和 `app/services/capability_extractor.py` 实现单仓库内容抓取和 LLM Repo Skill Card 抽取。
 - `scripts/analyze_idea.py --extract-cards` 可把 Phase 2 能力卡生成接入候选仓库分析结果。
-- `app/services/evidence_verifier.py`、`scoring.py`、`report_generator.py` 仍是后续阶段占位。
-- 测试覆盖配置读取、query generation、候选标准化、搜索去重、仓库内容收集和能力卡抽取。
+- `app/services/scoring.py` 实现初版综合评分，`app/services/report_generator.py` 和 `scripts/export_report.py` 实现 Markdown 报告导出。
+- `app/services/evidence_verifier.py` 仍是后续阶段占位。
+- 测试覆盖配置读取、query generation、候选标准化、搜索去重、仓库内容收集、能力卡抽取、评分和报告生成。
 
-规划文档中的 v0.1 验收目标尚未完成：输入 TTS audiobook idea 后，搜索到 Abogen / ebook2audiobook / Podcastfy，批量生成能力卡、Markdown 对比报告，并给出是否建议从零做的判断。
+规划文档中的 v0.1 验收目标已具备 CLI 路径，但仍需更多 live 验证和 evidence verifier：输入 TTS audiobook idea 后，搜索候选项目，批量生成能力卡，导出 Markdown 对比报告，并给出是否建议从零做的判断。
 
 ## Local Documentation
 
