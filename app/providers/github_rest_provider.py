@@ -30,11 +30,13 @@ class GitHubRestProvider:
         token: str = "",
         base_url: str = "https://api.github.com",
         timeout: int = 20,
+        max_retries: int = 2,
         opener: Callable[..., object] = urlopen,
     ) -> None:
         self.token = token
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.max_retries = max(0, max_retries)
         self._opener = opener
 
     def search_repositories(
@@ -88,16 +90,7 @@ class GitHubRestProvider:
         return headers
 
     def _get_json(self, url: str, failure_context: str) -> dict[str, object]:
-        request = Request(url, headers=self._headers())
-
-        try:
-            with self._opener(request, timeout=self.timeout) as response:
-                raw = response.read().decode("utf-8")
-        except HTTPError as exc:
-            message = exc.read().decode("utf-8", errors="replace")
-            raise GitHubProviderError(f"{failure_context} failed with HTTP {exc.code}: {message}", exc.code) from exc
-        except URLError as exc:
-            raise GitHubProviderError(f"{failure_context} failed: {exc.reason}") from exc
+        raw = self._read_url(url, failure_context)
 
         try:
             decoded = json.loads(raw)
@@ -107,6 +100,33 @@ class GitHubRestProvider:
         if not isinstance(decoded, dict):
             raise GitHubProviderError(f"{failure_context} returned an unexpected response")
         return decoded
+
+    def _read_url(self, url: str, failure_context: str) -> str:
+        """Read a GitHub API URL, retrying transient transport failures only."""
+
+        attempts = self.max_retries + 1
+        for attempt in range(1, attempts + 1):
+            request = Request(url, headers=self._headers())
+            try:
+                with self._opener(request, timeout=self.timeout) as response:
+                    return response.read().decode("utf-8")
+            except HTTPError as exc:
+                try:
+                    message = exc.read().decode("utf-8", errors="replace")
+                finally:
+                    exc.close()
+                raise GitHubProviderError(
+                    f"{failure_context} failed with HTTP {exc.code}: {message}",
+                    exc.code,
+                ) from exc
+            except URLError as exc:
+                if attempt < attempts:
+                    continue
+                raise GitHubProviderError(
+                    f"{failure_context} failed after {attempts} attempts: {exc.reason}"
+                ) from exc
+
+        raise GitHubProviderError(f"{failure_context} failed unexpectedly")
 
     def _split_repo_name(self, repo_full_name: str) -> tuple[str, str]:
         parts = repo_full_name.strip().split("/")
