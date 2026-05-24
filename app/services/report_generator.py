@@ -88,12 +88,13 @@ def _candidate_table(
     assessments: dict[str, CandidateAssessment],
 ) -> list[str]:
     lines = [
-        "| Repo | Decision | Score | Relevance | Maturity | Activity | Reuse | Docs | License |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Repo | Decision | Score | Relevance | Maturity | Activity | Reuse | Docs | License | Notes |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     ]
     for candidate, score in scored_candidates:
         assessment = assessments.get(candidate.full_name)
         decision = assessment.decision if assessment and assessment.decision else "unreviewed"
+        notes = _join_or_unknown(score.notes, limit=4) if score.notes else ""
         lines.append(
             " | ".join(
                 [
@@ -105,7 +106,8 @@ def _candidate_table(
                     f"{score.activity:.3f}",
                     f"{score.reusability:.3f}",
                     f"{score.documentation:.3f}",
-                    f"{score.license:.3f} |",
+                    f"{score.license:.3f}",
+                    f"{_cell(notes)} |",
                 ]
             )
         )
@@ -134,6 +136,8 @@ def _skill_card_sections(
         lines.append(f"- Inputs: {_join_or_unknown(card.input_formats)}")
         lines.append(f"- Outputs: {_join_or_unknown(card.output_formats)}")
         lines.append(f"- Core capabilities: {_join_or_unknown(card.core_capabilities)}")
+        if score.notes:
+            lines.append(f"- Evidence notes: {_join_or_unknown(score.notes)}")
         if card.limitations:
             lines.append(f"- Limitations: {_join_or_unknown(card.limitations)}")
         if card.evidence:

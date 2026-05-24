@@ -14,6 +14,7 @@ import math
 
 from app.models.repo import RepositoryCandidate
 from app.models.skill_card import RepoSkillCard
+from app.services.evidence_verifier import EvidenceVerification, EvidenceVerifier
 
 
 SCORING_WEIGHTS: dict[str, float] = {
@@ -59,8 +60,9 @@ class ScoreBreakdown:
 class ScoringEngine:
     """Score candidates across relevance, maturity, activity, and reuse signals."""
 
-    def __init__(self, today: date | None = None) -> None:
+    def __init__(self, today: date | None = None, evidence_verifier: EvidenceVerifier | None = None) -> None:
         self.today = today or datetime.now(timezone.utc).date()
+        self.evidence_verifier = evidence_verifier or EvidenceVerifier()
 
     def score(
         self,
@@ -85,7 +87,8 @@ class ScoringEngine:
         activity = self._score_activity(candidate)
         license_score = self._score_license(candidate)
         reusability = self._score_reusability(skill_card, license_score)
-        documentation = self._score_documentation(skill_card)
+        evidence_verification = self.evidence_verifier.verify_card(skill_card) if skill_card is not None else None
+        documentation = self._score_documentation(skill_card, evidence_verification)
 
         dimensions = {
             "relevance": relevance,
@@ -106,7 +109,7 @@ class ScoringEngine:
             reusability=_round_score(reusability),
             documentation=_round_score(documentation),
             license=_round_score(license_score),
-            notes=tuple(_score_notes(candidate, skill_card)),
+            notes=tuple(_score_notes(candidate, skill_card, evidence_verification)),
         )
 
     def _score_relevance(self, skill_card: RepoSkillCard | None, relevance_score: float | None) -> float:
@@ -161,15 +164,15 @@ class ScoringEngine:
             + 0.10 * format_score
         )
 
-    def _score_documentation(self, skill_card: RepoSkillCard | None) -> float:
+    def _score_documentation(
+        self,
+        skill_card: RepoSkillCard | None,
+        evidence_verification: EvidenceVerification | None,
+    ) -> float:
         if skill_card is None:
             return 0.0
 
-        evidence_score = 0.0
-        if skill_card.evidence:
-            average_confidence = sum(item.confidence for item in skill_card.evidence) / len(skill_card.evidence)
-            evidence_score = _clamp(average_confidence)
-
+        evidence_score = evidence_verification.score if evidence_verification is not None else 0.0
         summary_score = 1.0 if skill_card.summary else 0.0
         capability_score = 1.0 if skill_card.core_capabilities else 0.0
         return (0.45 * evidence_score) + (0.25 * summary_score) + (0.30 * capability_score)
@@ -206,7 +209,11 @@ def _parse_github_date(value: str) -> date | None:
         return None
 
 
-def _score_notes(candidate: RepositoryCandidate, skill_card: RepoSkillCard | None) -> list[str]:
+def _score_notes(
+    candidate: RepositoryCandidate,
+    skill_card: RepoSkillCard | None,
+    evidence_verification: EvidenceVerification | None,
+) -> list[str]:
     notes: list[str] = []
     if not candidate.license:
         notes.append("license missing")
@@ -214,6 +221,6 @@ def _score_notes(candidate: RepositoryCandidate, skill_card: RepoSkillCard | Non
         notes.append("activity unknown")
     if skill_card is None:
         notes.append("skill card missing")
-    elif not skill_card.evidence:
-        notes.append("evidence missing")
+    elif evidence_verification is not None:
+        notes.extend(evidence_verification.warnings)
     return notes

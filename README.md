@@ -24,6 +24,7 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - `scripts/fetch_repo.py` 的 Phase 2 仓库抓取 CLI，可抓取仓库元数据和 MVP README/docs/config 文件。
 - LLM Repo Skill Card 抽取，输出项目类别、输入/输出格式、接口形态、核心能力、限制、证据和置信度。
 - Phase 3 评分引擎，按 relevance、maturity、activity、reusability、documentation、license 生成综合分。
+- 确定性 evidence verifier，检查缺失、低置信、重复和可疑 instruction-like evidence，并影响报告风险提示。
 - `app/services/reuse_advisor.py` 根据评分和能力卡生成复用/自研建议。
 - `scripts/export_report.py` 可把分析 JSON 导出为 Markdown 对比报告。
 - DeepSeek / OpenAI 兼容 LLM 的通用配置项。
@@ -100,6 +101,13 @@ py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 5 --extract-c
 py -3.14 scripts\export_report.py --input analysis.json --output report.md
 ```
 
+Live smoke 验证完整搜索、能力卡和报告导出链路：
+
+```powershell
+py -3.14 scripts\analyze_idea.py --idea "I want to build a tool that converts EPUB/PDF files into TTS audio with synchronized subtitles." --max-repos 3 --max-queries 2 --extract-cards --card-limit 1 --output .reporadar_cache\live-analysis.json
+py -3.14 scripts\export_report.py --input .reporadar_cache\live-analysis.json --output .reporadar_cache\live-report.md
+```
+
 ## Configuration
 
 `.env.example` 包含当前支持的配置项：
@@ -169,7 +177,7 @@ Lint / format / build：
 
 ## Current Status
 
-项目处于 Phase 1 CLI 搜索闭环、Phase 2 仓库抓取/能力卡生成、Phase 3 初版评分与 Markdown 报告导出已实现的状态。
+项目处于 Phase 1 CLI 搜索闭环、Phase 2 仓库抓取/能力卡生成、Phase 3 初版评分、evidence verification 与 Markdown 报告导出已实现的状态。
 
 依据：
 
@@ -180,11 +188,12 @@ Lint / format / build：
 - `app/services/github_search.py` 实现候选标准化、去重、排序和缓存。
 - `scripts/fetch_repo.py`、`app/services/repo_collector.py` 和 `app/services/capability_extractor.py` 实现单仓库内容抓取和 LLM Repo Skill Card 抽取。
 - `scripts/analyze_idea.py --extract-cards` 可把 Phase 2 能力卡生成接入候选仓库分析结果。
-- `app/services/scoring.py` 实现初版综合评分，`app/services/reuse_advisor.py` 生成复用/自研建议，`app/services/report_generator.py` 和 `scripts/export_report.py` 实现 Markdown 报告导出。
-- `app/services/evidence_verifier.py` 仍是后续阶段占位。
-- 测试覆盖配置读取、query generation、候选标准化、搜索去重、idea 分析编排、仓库内容收集、能力卡抽取、评分和报告生成。
+- `app/services/evidence_verifier.py` 实现确定性 evidence quality 检查。
+- `app/services/scoring.py` 实现初版综合评分并使用 evidence verifier 调整 documentation score。
+- `app/services/reuse_advisor.py` 生成复用/自研建议，`app/services/report_generator.py` 和 `scripts/export_report.py` 实现 Markdown 报告导出。
+- 测试覆盖配置读取、query generation、候选标准化、搜索去重、idea 分析编排、仓库内容收集、能力卡抽取、evidence verification、评分和报告生成。
 
-规划文档中的 v0.1 验收目标已具备 CLI 路径，但仍需更多 live 验证和 evidence verifier：输入 TTS audiobook idea 后，搜索候选项目，批量生成能力卡，导出 Markdown 对比报告，并给出是否建议从零做的判断。
+规划文档中的 v0.1 验收目标已具备 CLI 路径，但仍需更多 live 验证：输入 TTS audiobook idea 后，搜索候选项目，批量生成能力卡，导出 Markdown 对比报告，并给出是否建议从零做的判断。
 
 ## Local Documentation
 
