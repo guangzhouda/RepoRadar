@@ -11,6 +11,7 @@ from typing import Mapping
 @dataclass(frozen=True)
 class Settings:
     github_token: str
+    github_api_base_url: str
     github_search_per_page: int
     llm_provider: str
     llm_api_key: str
@@ -66,6 +67,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
 
     return Settings(
         github_token=source.get("GITHUB_TOKEN", ""),
+        github_api_base_url=source.get("GITHUB_API_BASE_URL", "https://api.github.com"),
         github_search_per_page=_get_int(source, "GITHUB_SEARCH_PER_PAGE", 10),
         llm_provider=source.get("LLM_PROVIDER", "deepseek"),
         llm_api_key=source.get("LLM_API_KEY", ""),

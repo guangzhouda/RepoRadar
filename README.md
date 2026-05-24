@@ -16,14 +16,15 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - Python 包骨架和命令入口。
 - `.env` 配置读取，且进程环境变量覆盖 `.env`。
 - `--check-config` 配置健康检查。
-- `scripts/analyze_idea.py` 的 Phase 0 seed query 预览。
+- `scripts/analyze_idea.py` 的 Phase 1 GitHub repository search CLI。
+- 多 query 生成、候选仓库标准化、去重、排序和 JSON 缓存。
 - DeepSeek / OpenAI 兼容 LLM 的通用配置项。
 - 标准库 `unittest` bootstrap 测试。
 
 部分实现：
 
-- Query understanding 目前是简单英文 token 规则，尚未覆盖中文 idea。
-- Repo Skill Card、报告、GitHub/LLM provider 只有边界占位。
+- Query understanding 目前是确定性规则，已覆盖常见中英文技术词，但还不是 LLM 级语义理解。
+- Repo Skill Card、报告、LLM provider 只有边界占位。
 
 待确认：
 
@@ -44,8 +45,34 @@ py -3.14 -m app.main --check-config
 Phase 0 idea 分析预览：
 
 ```powershell
+py -3.14 scripts\analyze_idea.py --idea "I want to build a tool that converts EPUB/PDF files into TTS audio with synchronized subtitles." --max-repos 10 --offline
+```
+
+运行 GitHub 搜索：
+
+```powershell
 py -3.14 scripts\analyze_idea.py --idea "I want to build a tool that converts EPUB/PDF files into TTS audio with synchronized subtitles." --max-repos 10
 ```
+
+Markdown 输出：
+
+```powershell
+py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 10 --format markdown
+```
+
+## Configuration
+
+`.env.example` 包含当前支持的配置项：
+
+- `GITHUB_TOKEN`
+- `GITHUB_API_BASE_URL`
+- `GITHUB_SEARCH_PER_PAGE`
+- `LLM_PROVIDER`
+- `LLM_API_KEY`
+- `LLM_BASE_URL`
+- `LLM_MODEL`
+- `REPORADAR_CACHE_DIR`
+- `REPORADAR_LOG_LEVEL`
 
 ## Project Structure
 
@@ -75,7 +102,7 @@ py -3.14 -m app.main --check-config
 运行 idea 预览：
 
 ```powershell
-py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 10
+py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 10 --offline
 ```
 
 测试：
@@ -96,14 +123,16 @@ Lint / format / build：
 
 ## Current Status
 
-项目处于 Phase 0 bootstrap 完成、Phase 1 CLI 闭环待实现的状态。
+项目处于 Phase 1 CLI 搜索闭环已实现、Phase 2 README 抓取与能力卡生成待实现的状态。
 
 依据：
 
 - `app/main.py` 可输出配置健康状态。
-- `scripts/analyze_idea.py` 只生成 seed queries，不调用 GitHub 或 LLM。
-- `app/providers/*` 和多个 `app/services/*` 方法仍抛出 `NotImplementedError`。
-- `tests/test_bootstrap.py` 仅覆盖配置读取和 bootstrap query。
+- `scripts/analyze_idea.py` 可生成 queries，并在非 `--offline` 模式调用 GitHub repository search。
+- `app/providers/github_rest_provider.py` 实现 GitHub REST repository search。
+- `app/services/github_search.py` 实现候选标准化、去重、排序和缓存。
+- `app/services/repo_collector.py`、`capability_extractor.py`、`evidence_verifier.py`、`scoring.py`、`report_generator.py` 仍是后续阶段占位。
+- 测试覆盖配置读取、query generation、候选标准化和搜索去重。
 
 规划文档中的 v0.1 验收目标尚未完成：输入 TTS audiobook idea 后，搜索到 Abogen / ebook2audiobook / Podcastfy，生成能力卡、Markdown 对比报告，并给出是否建议从零做的判断。
 

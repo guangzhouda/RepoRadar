@@ -11,6 +11,7 @@ class BootstrapTests(unittest.TestCase):
     def test_load_settings_uses_defaults(self):
         settings = load_settings({})
 
+        self.assertEqual(settings.github_api_base_url, "https://api.github.com")
         self.assertEqual(settings.github_search_per_page, 10)
         self.assertEqual(settings.llm_provider, "deepseek")
         self.assertEqual(settings.llm_base_url, "")
@@ -21,7 +22,7 @@ class BootstrapTests(unittest.TestCase):
         status = build_config_status()
 
         self.assertEqual(status["app"], "RepoRadar")
-        self.assertEqual(status["phase"], "0-bootstrap")
+        self.assertEqual(status["phase"], "1-cli-search")
 
     def test_read_env_file_supports_llm_base_url_and_model(self):
         with TemporaryDirectory() as directory:
@@ -49,7 +50,8 @@ class BootstrapTests(unittest.TestCase):
         queries = build_bootstrap_queries("EPUB PDF TTS subtitles", max_queries=2)
 
         self.assertEqual(len(queries), 2)
-        self.assertIn("epub pdf tts subtitles", queries[0])
+        self.assertIn("epub pdf tts", queries[0])
+        self.assertIn("in:name,description,readme", queries[0])
 
 
 if __name__ == "__main__":

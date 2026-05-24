@@ -26,8 +26,9 @@ def build_config_status() -> dict[str, object]:
     return {
         "app": "RepoRadar",
         "version": __version__,
-        "phase": "0-bootstrap",
+        "phase": "1-cli-search",
         "github_token_configured": bool(settings.github_token),
+        "github_api_base_url": settings.github_api_base_url,
         "llm_key_configured": bool(settings.llm_api_key),
         "llm_provider": settings.llm_provider,
         "llm_base_url": settings.llm_base_url,
