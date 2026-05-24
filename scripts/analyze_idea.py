@@ -19,10 +19,12 @@ from app.core.config import load_settings
 from app.providers.github_rest_provider import GitHubProviderError, GitHubRestProvider
 from app.providers.openai_provider import LLMProviderError, OpenAIProvider
 from app.services.cache import JsonFileCache
+from app.services.capability_extractor import CapabilityExtractor
 from app.services.github_search import GitHubSearchService
 from app.services.llm_candidate_reviewer import LLMCandidateReviewer
 from app.services.llm_query_planner import LLMQueryPlanner
 from app.services.query_understanding import build_search_queries
+from app.services.repo_collector import RepositoryCollector
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -44,6 +46,18 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("llm", "none"),
         default="llm",
         help="Use LLM relevance review by default after GitHub search.",
+    )
+    parser.add_argument(
+        "--extract-cards",
+        action="store_true",
+        help="Collect README/docs/config files and generate LLM Repo Skill Cards for selected candidates.",
+    )
+    parser.add_argument("--card-limit", type=int, default=3, help="Maximum candidates to generate skill cards for.")
+    parser.add_argument(
+        "--card-decision",
+        choices=("keep", "all"),
+        default="keep",
+        help="Generate cards for LLM-kept candidates by default, or all displayed candidates.",
     )
     return parser
 
@@ -67,9 +81,57 @@ def build_markdown(idea: str, candidates: list[dict[str, object]]) -> str:
             lines.append(f"   - Reject reason: {candidate['reject_reason']}")
         if candidate.get("rationale"):
             lines.append(f"   - Rationale: {candidate['rationale']}")
+        skill_card = candidate.get("skill_card")
+        if isinstance(skill_card, dict):
+            capabilities = skill_card.get("core_capabilities", [])
+            if isinstance(capabilities, list) and capabilities:
+                lines.append(f"   - Core capabilities: {', '.join(str(item) for item in capabilities[:5])}")
+            confidence = skill_card.get("confidence")
+            lines.append(f"   - Skill card confidence: {confidence}")
+        if candidate.get("skill_card_error"):
+            lines.append(f"   - Skill card error: {candidate['skill_card_error']}")
         if candidate["description"]:
             lines.append(f"   - {candidate['description']}")
     return "\n".join(lines)
+
+
+def attach_skill_cards(
+    candidates: list[dict[str, object]],
+    provider: GitHubRestProvider,
+    llm_provider: OpenAIProvider,
+    cache: JsonFileCache,
+    use_cache: bool,
+    limit: int,
+    decision_filter: str,
+) -> None:
+    """Mutate candidate dictionaries with Repo Skill Cards for selected repos."""
+
+    collector = RepositoryCollector(provider=provider, cache=cache, use_cache=use_cache)
+    extractor = CapabilityExtractor(llm_provider)
+    attached = 0
+
+    for candidate in candidates:
+        if attached >= max(0, limit):
+            return
+        if decision_filter == "keep" and candidate.get("decision") == "reject":
+            continue
+
+        full_name = str(candidate.get("full_name") or "").strip()
+        if not full_name:
+            continue
+
+        try:
+            collection = collector.collect(full_name)
+            card = extractor.extract(full_name, collection)
+        except (GitHubProviderError, LLMProviderError, ValueError) as exc:
+            candidate["skill_card_error"] = str(exc)
+            attached += 1
+            continue
+
+        files = collection.get("files", {})
+        candidate["collected_files"] = list(files.keys()) if isinstance(files, dict) else []
+        candidate["skill_card"] = card.to_dict()
+        attached += 1
 
 
 def main() -> int:
@@ -101,15 +163,19 @@ def main() -> int:
         "max_repos": args.max_repos,
         "query_mode": args.query_mode,
         "review_mode": args.review_mode if not args.offline else "none",
+        "extract_cards": bool(args.extract_cards and not args.offline),
+        "card_limit": args.card_limit if args.extract_cards and not args.offline else 0,
+        "card_decision": args.card_decision if args.extract_cards and not args.offline else "none",
         "queries": queries,
         "candidates": [],
     }
 
     if not args.offline:
         provider = GitHubRestProvider(token=settings.github_token, base_url=settings.github_api_base_url)
+        cache = JsonFileCache(settings.cache_dir)
         service = GitHubSearchService(
             provider=provider,
-            cache=JsonFileCache(settings.cache_dir),
+            cache=cache,
             use_cache=not args.no_cache,
         )
         try:
@@ -121,6 +187,16 @@ def main() -> int:
                 payload["candidates"] = reviewer.apply_reviews(candidates, reviews, args.max_repos)
             else:
                 payload["candidates"] = [candidate.to_dict() for candidate in candidates[: args.max_repos]]
+            if args.extract_cards:
+                attach_skill_cards(
+                    candidates=payload["candidates"],
+                    provider=provider,
+                    llm_provider=llm_provider,
+                    cache=cache,
+                    use_cache=not args.no_cache,
+                    limit=args.card_limit,
+                    decision_filter=args.card_decision,
+                )
         except GitHubProviderError as exc:
             payload["error"] = str(exc)
             print(json.dumps(payload, indent=2, ensure_ascii=False), file=sys.stderr)

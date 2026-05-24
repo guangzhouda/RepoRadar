@@ -19,13 +19,17 @@ RepoRadar 的目标是：给定一个项目想法，帮助用户发现相似 Git
 - `scripts/analyze_idea.py` 的 Phase 1 LLM query planning + GitHub repository search CLI。
 - 多 query 生成、候选仓库标准化、去重、排序和 JSON 缓存。
 - LLM 候选相关性评审，输出 `relevance_score`、`decision`、`reject_reason` 和 `rationale`。
+- 候选列表保留 `reject` 项用于人工审查，不在展示层直接隐藏。
+- `scripts/fetch_repo.py` 的 Phase 2 仓库抓取 CLI，可抓取仓库元数据和 MVP README/docs/config 文件。
+- LLM Repo Skill Card 抽取，输出项目类别、输入/输出格式、接口形态、核心能力、限制、证据和置信度。
 - DeepSeek / OpenAI 兼容 LLM 的通用配置项。
 - 标准库 `unittest` bootstrap 测试。
 
 部分实现：
 
-- Query understanding 目前是确定性规则，已覆盖常见中英文技术词，但还不是 LLM 级语义理解。
-- Repo Skill Card、报告、LLM provider 只有边界占位。
+- Query understanding 的规则实现仍保留为 `--query-mode rules` 诊断 fallback，默认路径已经使用 LLM。
+- Repo Skill Card 已有单仓库抽取 CLI，但还没有接入批量候选分析流水线。
+- 报告、证据校验、评分模块仍是后续阶段占位。
 
 待确认：
 
@@ -65,6 +69,24 @@ Markdown 输出：
 
 ```powershell
 py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 10 --format markdown
+```
+
+抓取单个仓库的 README/docs/config 摘要：
+
+```powershell
+py -3.14 scripts\fetch_repo.py --repo denizsafak/abogen
+```
+
+抓取单个仓库并用 LLM 生成 Repo Skill Card：
+
+```powershell
+py -3.14 scripts\fetch_repo.py --repo denizsafak/abogen --extract-card
+```
+
+搜索候选仓库并为保留候选生成 Repo Skill Card：
+
+```powershell
+py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 5 --extract-cards --card-limit 2
 ```
 
 ## Configuration
@@ -112,6 +134,12 @@ py -3.14 -m app.main --check-config
 py -3.14 scripts\analyze_idea.py --idea "project idea" --max-repos 10 --offline
 ```
 
+运行单仓库抓取：
+
+```powershell
+py -3.14 scripts\fetch_repo.py --repo owner/repo
+```
+
 测试：
 
 ```powershell
@@ -130,7 +158,7 @@ Lint / format / build：
 
 ## Current Status
 
-项目处于 Phase 1 CLI 搜索闭环已实现、Phase 2 README 抓取与能力卡生成待实现的状态。
+项目处于 Phase 1 CLI 搜索闭环已实现、Phase 2 单仓库 README 抓取与 LLM 能力卡生成已实现的状态。
 
 依据：
 
@@ -139,10 +167,12 @@ Lint / format / build：
 - 默认 query generation 和候选解释使用 LLM；`--query-mode rules` 仅作为诊断 fallback。
 - `app/providers/github_rest_provider.py` 实现 GitHub REST repository search。
 - `app/services/github_search.py` 实现候选标准化、去重、排序和缓存。
-- `app/services/repo_collector.py`、`capability_extractor.py`、`evidence_verifier.py`、`scoring.py`、`report_generator.py` 仍是后续阶段占位。
-- 测试覆盖配置读取、query generation、候选标准化和搜索去重。
+- `scripts/fetch_repo.py`、`app/services/repo_collector.py` 和 `app/services/capability_extractor.py` 实现单仓库内容抓取和 LLM Repo Skill Card 抽取。
+- `scripts/analyze_idea.py --extract-cards` 可把 Phase 2 能力卡生成接入候选仓库分析结果。
+- `app/services/evidence_verifier.py`、`scoring.py`、`report_generator.py` 仍是后续阶段占位。
+- 测试覆盖配置读取、query generation、候选标准化、搜索去重、仓库内容收集和能力卡抽取。
 
-规划文档中的 v0.1 验收目标尚未完成：输入 TTS audiobook idea 后，搜索到 Abogen / ebook2audiobook / Podcastfy，生成能力卡、Markdown 对比报告，并给出是否建议从零做的判断。
+规划文档中的 v0.1 验收目标尚未完成：输入 TTS audiobook idea 后，搜索到 Abogen / ebook2audiobook / Podcastfy，批量生成能力卡、Markdown 对比报告，并给出是否建议从零做的判断。
 
 ## Local Documentation
 

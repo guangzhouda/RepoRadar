@@ -33,10 +33,13 @@ class LLMQueryPlanner:
 - JSON schema: {{"queries": ["..."]}}
 - query 必须适合 GitHub repository search。
 - 使用能力组合，不要只依赖一个关键词。
+- 不要使用 OR、括号或复杂布尔表达式；每条 query 应该用空格组合 3-6 个必须同时出现的核心英文关键词。
 - 避免过宽泛的 awesome/list/newsletter/resource 查询。
 - 优先真实工具项目，而不是资料集合。
 - 可使用 in:name,description,readme、stars、pushed、archived:false、fork:false、language、topic 等 GitHub 搜索限定词。
 - 对 TTS/有声书场景，优先组合 epub/pdf/ebook、tts/text-to-speech、audiobook、subtitle/srt/m4b 等关键词。
+- 高精度示例：epub pdf tts subtitle in:name,description,readme stars:>5 pushed:>2022-01-01 archived:false fork:false
+- 高精度示例：ebook audiobook srt m4b language:python stars:>5 archived:false fork:false
 
 用户想法：
 {idea}

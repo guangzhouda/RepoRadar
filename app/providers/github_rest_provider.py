@@ -1,4 +1,4 @@
-"""GitHub REST provider for repository search.
+"""GitHub REST provider for repository search and repository files.
 
 This provider owns HTTP details for GitHub's REST API. Service code should pass
 queries in and receive decoded response dictionaries rather than handling URLs,
@@ -10,16 +10,20 @@ from __future__ import annotations
 import json
 from typing import Callable
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 
 class GitHubProviderError(RuntimeError):
     """Raised when the GitHub REST provider cannot complete a request."""
 
+    def __init__(self, message: str, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
 
 class GitHubRestProvider:
-    """Minimal GitHub REST client for repository search."""
+    """Minimal GitHub REST client for repository search and content lookup."""
 
     def __init__(
         self,
@@ -53,25 +57,25 @@ class GitHubRestProvider:
                 "order": order,
             }
         )
-        request = Request(f"{self.base_url}/search/repositories?{params}", headers=self._headers())
+        return self._get_json(f"{self.base_url}/search/repositories?{params}", "GitHub search")
 
-        try:
-            with self._opener(request, timeout=self.timeout) as response:
-                raw = response.read().decode("utf-8")
-        except HTTPError as exc:
-            message = exc.read().decode("utf-8", errors="replace")
-            raise GitHubProviderError(f"GitHub search failed with HTTP {exc.code}: {message}") from exc
-        except URLError as exc:
-            raise GitHubProviderError(f"GitHub search failed: {exc.reason}") from exc
+    def get_repository(self, repo_full_name: str) -> dict[str, object]:
+        """Return GitHub repository metadata for an ``owner/name`` repository."""
 
-        try:
-            decoded = json.loads(raw)
-        except json.JSONDecodeError as exc:
-            raise GitHubProviderError("GitHub search returned invalid JSON") from exc
+        owner, repo = self._split_repo_name(repo_full_name)
+        endpoint = f"{self.base_url}/repos/{quote(owner, safe='')}/{quote(repo, safe='')}"
+        return self._get_json(endpoint, f"GitHub repository lookup for {repo_full_name}")
 
-        if not isinstance(decoded, dict):
-            raise GitHubProviderError("GitHub search returned an unexpected response")
-        return decoded
+    def get_repository_file(self, repo_full_name: str, path: str) -> dict[str, object]:
+        """Return GitHub contents API metadata for a repository file path."""
+
+        if not path.strip():
+            raise ValueError("path must not be empty")
+
+        owner, repo = self._split_repo_name(repo_full_name)
+        encoded_path = quote(path.strip().lstrip("/"), safe="/")
+        endpoint = f"{self.base_url}/repos/{quote(owner, safe='')}/{quote(repo, safe='')}/contents/{encoded_path}"
+        return self._get_json(endpoint, f"GitHub file lookup for {repo_full_name}:{path}")
 
     def _headers(self) -> dict[str, str]:
         headers = {
@@ -82,4 +86,31 @@ class GitHubRestProvider:
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
+
+    def _get_json(self, url: str, failure_context: str) -> dict[str, object]:
+        request = Request(url, headers=self._headers())
+
+        try:
+            with self._opener(request, timeout=self.timeout) as response:
+                raw = response.read().decode("utf-8")
+        except HTTPError as exc:
+            message = exc.read().decode("utf-8", errors="replace")
+            raise GitHubProviderError(f"{failure_context} failed with HTTP {exc.code}: {message}", exc.code) from exc
+        except URLError as exc:
+            raise GitHubProviderError(f"{failure_context} failed: {exc.reason}") from exc
+
+        try:
+            decoded = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise GitHubProviderError(f"{failure_context} returned invalid JSON") from exc
+
+        if not isinstance(decoded, dict):
+            raise GitHubProviderError(f"{failure_context} returned an unexpected response")
+        return decoded
+
+    def _split_repo_name(self, repo_full_name: str) -> tuple[str, str]:
+        parts = repo_full_name.strip().split("/")
+        if len(parts) != 2 or not all(parts):
+            raise ValueError("repo_full_name must use owner/repo format")
+        return parts[0], parts[1]
 
