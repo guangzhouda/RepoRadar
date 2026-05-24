@@ -22,6 +22,7 @@ env/
 .reporadar_cache/
 
 # Local planning/reference documents
+AGENTS.md
 repo_radar_project_planning_document.md
 docs/
 
