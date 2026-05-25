@@ -95,6 +95,68 @@ class PayloadLocalizer:
         return parsed
 
 
+class TextLocalizer:
+    """Translate one frontend display string without changing source fields.
+
+    This is used by interactive UI actions where the user requests translation
+    for a single candidate description after analysis has already completed.
+    Results are cached by model, target language, scope, and full input text.
+    """
+
+    def __init__(self, provider: TextCompletionProvider, cache: JsonFileCache, model_id: str = "") -> None:
+        self.provider = provider
+        self.cache = cache
+        self.model_id = model_id
+
+    def localize_text(self, text: str, target_language: str, scope: str = "display_text") -> dict[str, Any]:
+        """Return translated text for one display field.
+
+        Args:
+            text: Source text to translate. It is not truncated.
+            target_language: Supported target language alias, currently zh/en.
+            scope: Caller-provided purpose label included in the cache key.
+
+        Returns:
+            A small JSON-serializable object with ``text``, ``status``, and
+            ``cached`` fields.
+
+        Raises:
+            ValueError: If text is empty, target language is unsupported, or
+                the provider response does not contain translated text.
+        """
+
+        source_text = str(text or "").strip()
+        if not source_text:
+            raise ValueError("text is required")
+
+        language = normalize_display_language(target_language)
+        if language is None:
+            raise ValueError("target_language must be zh or en")
+
+        if not _needs_translation(source_text, language):
+            return {"text": source_text, "status": "not_needed", "cached": False}
+
+        cache_key = _text_cache_key(source_text, language, scope, self.model_id)
+        cached = self.cache.get("text_localization", cache_key)
+        if cached is not None:
+            cached_text = str(cached.get("text") or "").strip()
+            if cached_text:
+                return {"text": cached_text, "status": "translated", "cached": True}
+
+        translated_text = self._translate_text(source_text, language, scope)
+        cached_payload = {"text": translated_text}
+        self.cache.set("text_localization", cache_key, cached_payload)
+        return {"text": translated_text, "status": "translated", "cached": False}
+
+    def _translate_text(self, text: str, target_language: str, scope: str) -> str:
+        prompt = build_text_localization_prompt(text, target_language, scope)
+        parsed = parse_json_object(self.provider.complete(prompt))
+        translated = str(parsed.get("text") or "").strip()
+        if not translated:
+            raise ValueError("localization response must include non-empty text")
+        return translated
+
+
 def normalize_display_language(language: str) -> str | None:
     """Return the supported display language code, or None for no localization."""
 
@@ -120,6 +182,24 @@ def build_localization_prompt(requests: list[dict[str, Any]], target_language: s
             "Omit empty translated fields, but keep every full_name that appears in the input.",
             "",
             json.dumps({"items": requests}, ensure_ascii=False, indent=2),
+        ]
+    )
+
+
+def build_text_localization_prompt(text: str, target_language: str, scope: str) -> str:
+    """Build the strict JSON prompt for one display text translation."""
+
+    language_name = "Simplified Chinese" if target_language == "zh" else "English"
+    return "\n".join(
+        [
+            f"Translate this GitHub repository display text into {language_name}.",
+            "Keep repository names, product names, API names, model names, file formats, and programming terms unchanged when appropriate.",
+            "Preserve the meaning and keep the translation concise for UI display.",
+            "Return strict JSON only. Do not add Markdown fences or commentary.",
+            'Schema: {"text":"..."}',
+            f"Scope: {scope}",
+            "",
+            json.dumps({"text": text}, ensure_ascii=False, indent=2),
         ]
     )
 
@@ -232,6 +312,19 @@ def _cache_key(requests: list[dict[str, Any]], target_language: str, model_id: s
             "model": model_id,
             "target_language": target_language,
             "items": requests,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+
+
+def _text_cache_key(text: str, target_language: str, scope: str, model_id: str) -> str:
+    return json.dumps(
+        {
+            "model": model_id,
+            "target_language": target_language,
+            "scope": scope,
+            "text": text,
         },
         ensure_ascii=False,
         sort_keys=True,

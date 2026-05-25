@@ -6,6 +6,7 @@ service layer:
 
 - ``GET /api/health``
 - ``POST /api/analyze``
+- ``POST /api/localize``
 - ``POST /api/report``
 
 It is meant for local MVP usage, not as a production web server.
@@ -25,7 +26,7 @@ from app.core.config import Settings, load_settings
 from app.providers.openai_provider import LLMProviderError, OpenAIProvider
 from app.services.cache import JsonFileCache
 from app.services.idea_analysis import IdeaAnalysisOptions, IdeaAnalysisService
-from app.services.localization import PayloadLocalizer, normalize_display_language
+from app.services.localization import PayloadLocalizer, TextLocalizer, normalize_display_language
 from app.services.report_generator import ReportGenerator
 from app.services.report_payload import build_report_from_payload
 
@@ -78,6 +79,9 @@ def _make_handler(frontend_dir: Path, settings_factory: SettingsFactory) -> type
                 if parsed.path == "/api/analyze":
                     self._handle_analyze(body)
                     return
+                if parsed.path == "/api/localize":
+                    self._handle_localize(body)
+                    return
                 if parsed.path == "/api/report":
                     self._handle_report(body)
                     return
@@ -117,6 +121,33 @@ def _make_handler(frontend_dir: Path, settings_factory: SettingsFactory) -> type
             report = build_report_from_payload(raw_payload)
             markdown = ReportGenerator().generate_markdown(report)
             self._write_json({"ok": True, "markdown": markdown})
+
+        def _handle_localize(self, body: dict[str, Any]) -> None:
+            text = str(body.get("text") or "").strip()
+            if not text:
+                raise ValueError("text is required")
+            language = normalize_display_language(str(body.get("target_language") or ""))
+            if language is None:
+                raise ValueError("target_language must be zh or en")
+
+            settings = settings_factory()
+            if not (settings.llm_api_key and settings.llm_base_url and settings.llm_model):
+                self._write_json({"ok": False, "error": "LLM is not configured"})
+                return
+
+            provider = OpenAIProvider(
+                api_key=settings.llm_api_key,
+                base_url=settings.llm_base_url,
+                model=settings.llm_model,
+            )
+            scope = str(body.get("scope") or "display_text").strip() or "display_text"
+            localizer = TextLocalizer(provider, cache=JsonFileCache(settings.cache_dir), model_id=settings.llm_model)
+            try:
+                localized = localizer.localize_text(text, language, scope=scope)
+            except (LLMProviderError, ValueError) as exc:
+                self._write_json({"ok": False, "error": str(exc)})
+                return
+            self._write_json({"ok": True, **localized, "target_language": language})
 
         def _read_json_body(self) -> dict[str, Any]:
             content_length = int(self.headers.get("Content-Length", "0") or "0")

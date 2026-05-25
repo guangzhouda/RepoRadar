@@ -105,6 +105,19 @@ class LocalServerTests(unittest.TestCase):
         self.assertIn("# RepoRadar Research Report", payload["markdown"])
         self.assertIn("owner/repo", payload["markdown"])
 
+    def test_localize_endpoint_reports_missing_llm_configuration(self):
+        payload = self._post_json(
+            "/api/localize",
+            {
+                "text": "An open source repository discovery tool.",
+                "target_language": "zh",
+                "scope": "candidate_description",
+            },
+        )
+
+        self.assertFalse(payload["ok"])
+        self.assertIn("LLM", payload["error"])
+
     def _get_json(self, path: str) -> dict:
         response = request.urlopen(f"{self.base_url}{path}", timeout=5)
         return json.loads(response.read().decode("utf-8"))

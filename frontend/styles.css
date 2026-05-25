@@ -553,6 +553,33 @@ select:focus {
   line-height: 1.45;
 }
 
+.repo-description {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.repo-description span {
+  min-width: 0;
+}
+
+.inline-action {
+  flex: 0 0 auto;
+  min-height: 24px;
+  border: 1px solid #a7dfe5;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 8px;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.inline-action:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .source-chip {
   display: inline-flex;
   min-height: 20px;

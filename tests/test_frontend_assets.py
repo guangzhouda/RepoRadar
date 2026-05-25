@@ -31,6 +31,19 @@ class FrontendAssetTests(unittest.TestCase):
         self.assertNotIn('data-i18n="status.runningAnalysisTitle"', index)
         self.assertIn("runTitle.textContent = currentIdeaTitle();", app)
 
+    def test_candidate_description_translation_ui_is_wired(self):
+        root = Path(__file__).resolve().parents[1]
+        i18n = (root / "frontend" / "js" / "i18n.js").read_text(encoding="utf-8")
+        api = (root / "frontend" / "js" / "api.js").read_text(encoding="utf-8")
+        app = (root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+        views = (root / "frontend" / "js" / "candidate-views.js").read_text(encoding="utf-8")
+
+        self.assertIn('"action.translate"', i18n)
+        self.assertIn('"action.showOriginal"', i18n)
+        self.assertIn('requestJson(\n      "/api/localize"', api)
+        self.assertIn("toggleCandidateDescription", app)
+        self.assertIn("data-description-action", views)
+
 
 if __name__ == "__main__":
     unittest.main()

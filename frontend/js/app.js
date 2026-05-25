@@ -24,7 +24,8 @@
   const runTitle = document.querySelector("#run-title");
 
   let currentPayload = formatters.clonePayload(sample.samplePayload);
-  let currentCandidates = formatters.normalizeCandidates(currentPayload);
+  let descriptionStates = new Map();
+  let currentCandidates = normalizeCandidateViewModels();
   let selectedCandidate = currentCandidates[0];
   let currentFilter = "all";
   let activeController = null;
@@ -91,7 +92,8 @@
     global.setTimeout(() => {
       currentPayload = formatters.clonePayload(sample.samplePayload);
       currentPayload.idea = currentIdeaTitle();
-      currentCandidates = formatters.normalizeCandidates(currentPayload);
+      descriptionStates = new Map();
+      currentCandidates = normalizeCandidateViewModels();
       selectedCandidate = currentCandidates[0];
       backendMarkdown = "";
       renderReport();
@@ -111,7 +113,8 @@
       }
 
       currentPayload = response.payload;
-      currentCandidates = formatters.normalizeCandidates(currentPayload);
+      descriptionStates = new Map();
+      currentCandidates = normalizeCandidateViewModels();
       selectedCandidate = currentCandidates[0];
       appendLog(i18n.t("log.analysisComplete", { count: currentCandidates.length }));
       appendLocalizationStatus(currentPayload);
@@ -178,7 +181,10 @@
   }
 
   function renderTable() {
-    candidateViews.renderTable(currentCandidates, selectedCandidate?.fullName || "", currentFilter, selectCandidate);
+    candidateViews.renderTable(currentCandidates, selectedCandidate?.fullName || "", currentFilter, {
+      onDescriptionToggle: toggleCandidateDescription,
+      onSelect: selectCandidate,
+    });
   }
 
   function selectCandidate(fullName) {
@@ -189,6 +195,139 @@
     candidateViews.renderSummary(selectedCandidate);
     candidateViews.renderDetail(selectedCandidate);
     renderTable();
+  }
+
+  function refreshCandidateDisplay() {
+    const selectedName = selectedCandidate?.fullName || "";
+    currentCandidates = normalizeCandidateViewModels();
+    selectedCandidate = currentCandidates.find((candidate) => candidate.fullName === selectedName) || currentCandidates[0];
+    if (!selectedCandidate) {
+      renderTable();
+      return;
+    }
+    candidateViews.renderSummary(selectedCandidate);
+    candidateViews.renderDetail(selectedCandidate);
+    renderTable();
+    renderReport();
+  }
+
+  function normalizeCandidateViewModels() {
+    const candidates = formatters.normalizeCandidates(currentPayload);
+    candidates.forEach(applyDescriptionState);
+    return candidates;
+  }
+
+  function applyDescriptionState(candidate) {
+    const state = descriptionStates.get(candidate.fullName) || {};
+    const language = i18n.getLanguage();
+    const original = originalDescription(candidate.raw);
+    const translated = localizedDescription(candidate.raw, language);
+    if (state.mode === "original" && original) {
+      candidate.description = original;
+      candidate.descriptionIsOriginal = isOriginalForLanguage(original, language);
+    }
+    candidate.descriptionAction = descriptionAction(original, translated, state, language);
+  }
+
+  function descriptionAction(original, translated, state, language) {
+    if (!original || !["zh", "en"].includes(language)) {
+      return { visible: false };
+    }
+    if (state.loading) {
+      return { visible: true, disabled: true, label: i18n.t("status.translating") };
+    }
+    if (state.mode === "original") {
+      return { visible: Boolean(translated || needsTranslation(original, language)), label: i18n.t("action.translate") };
+    }
+    if (translated) {
+      return { visible: true, label: i18n.t("action.showOriginal") };
+    }
+    if (needsTranslation(original, language)) {
+      return { visible: true, label: i18n.t("action.translate"), title: state.error || "" };
+    }
+    return { visible: false };
+  }
+
+  async function toggleCandidateDescription(fullName) {
+    const raw = findPayloadCandidate(fullName);
+    if (!raw) {
+      return;
+    }
+
+    const language = i18n.getLanguage();
+    const original = originalDescription(raw);
+    const translated = localizedDescription(raw, language);
+    const state = descriptionStates.get(fullName) || {};
+
+    if (state.mode === "original" && translated) {
+      descriptionStates.set(fullName, { mode: "translated" });
+      refreshCandidateDisplay();
+      return;
+    }
+
+    if (state.mode !== "original" && translated) {
+      descriptionStates.set(fullName, { mode: "original" });
+      refreshCandidateDisplay();
+      return;
+    }
+
+    if (!api.isApiMode()) {
+      descriptionStates.set(fullName, { ...state, error: i18n.t("ui.apiMissingHint") });
+      refreshCandidateDisplay();
+      return;
+    }
+
+    descriptionStates.set(fullName, { ...state, loading: true, error: "" });
+    refreshCandidateDisplay();
+    try {
+      const response = await api.localizeText(original, language);
+      if (!response.ok) {
+        throw new Error(response.error || i18n.t("status.unknown"));
+      }
+      setDescriptionTranslation(raw, language, response.text);
+      descriptionStates.set(fullName, { mode: "translated" });
+    } catch (error) {
+      descriptionStates.set(fullName, { ...state, error: error.message });
+    }
+    refreshCandidateDisplay();
+  }
+
+  function findPayloadCandidate(fullName) {
+    return (currentPayload.candidates || []).find((candidate) => {
+      return (candidate.full_name || candidate.fullName || "") === fullName;
+    });
+  }
+
+  function originalDescription(raw) {
+    return typeof raw?.description === "string" ? raw.description.trim() : "";
+  }
+
+  function localizedDescription(raw, language) {
+    const direct = typeof raw?.[`description_${language}`] === "string" ? raw[`description_${language}`].trim() : "";
+    if (direct) {
+      return direct;
+    }
+    const i18nMap = raw?.description_i18n || raw?.description_localized;
+    if (i18nMap && typeof i18nMap === "object" && typeof i18nMap[language] === "string") {
+      return i18nMap[language].trim();
+    }
+    return "";
+  }
+
+  function setDescriptionTranslation(raw, language, text) {
+    if (!raw.description_i18n || typeof raw.description_i18n !== "object" || Array.isArray(raw.description_i18n)) {
+      raw.description_i18n = {};
+    }
+    raw.description_i18n[language] = text;
+  }
+
+  function needsTranslation(text, language) {
+    const hasCjk = /[\u3400-\u9FFF]/.test(text);
+    return language === "zh" ? !hasCjk : hasCjk;
+  }
+
+  function isOriginalForLanguage(text, language) {
+    return language === "zh" ? /[A-Za-z]/.test(text) && !/[\u3400-\u9FFF]/.test(text) : /[\u3400-\u9FFF]/.test(text);
   }
 
   function renderReport() {
@@ -252,7 +391,7 @@
 
   function onLanguageChange() {
     i18n.setLanguage(languageSelect.value);
-    currentCandidates = formatters.normalizeCandidates(currentPayload);
+    currentCandidates = normalizeCandidateViewModels();
     selectedCandidate = currentCandidates.find((candidate) => candidate.fullName === selectedCandidate?.fullName) || currentCandidates[0];
     refreshOptionLabels();
     renderTable();

@@ -8,7 +8,9 @@
   const repoTableBody = document.querySelector("#repo-table-body");
   const resultsTitle = document.querySelector("#results-title");
 
-  function renderTable(candidates, selectedFullName, currentFilter, onSelect) {
+  function renderTable(candidates, selectedFullName, currentFilter, handlers) {
+    const onSelect = typeof handlers === "function" ? handlers : handlers?.onSelect;
+    const onDescriptionToggle = typeof handlers === "object" ? handlers.onDescriptionToggle : null;
     const rows = candidates.filter((candidate) => currentFilter === "all" || candidate.decision === currentFilter);
     resultsTitle.textContent = i18n.t("section.reviewedCandidates", { count: candidates.length });
     repoTableBody.innerHTML = "";
@@ -24,7 +26,10 @@
         <td>
           <div class="repo-name">
             <strong>${escape(candidate.fullName)}</strong>
-            <span>${escape(candidate.description)}${sourceChip(candidate.descriptionIsOriginal)}</span>
+            <div class="repo-description">
+              <span>${escape(candidate.description)}${sourceChip(candidate.descriptionIsOriginal)}</span>
+              ${descriptionActionButton(candidate)}
+            </div>
           </div>
         </td>
         <td>${decisionBadge(candidate.decision)}</td>
@@ -33,7 +38,14 @@
         <td>${escape(candidate.language)}</td>
         <td>${escape(candidate.updated)}</td>
       `;
-      row.addEventListener("click", () => onSelect(candidate.fullName));
+      const descriptionButton = row.querySelector("[data-description-action]");
+      if (descriptionButton && onDescriptionToggle) {
+        descriptionButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          onDescriptionToggle(candidate.fullName);
+        });
+      }
+      row.addEventListener("click", () => onSelect?.(candidate.fullName));
       repoTableBody.appendChild(row);
     });
   }
@@ -148,6 +160,16 @@
 
   function sourceChip(isOriginal) {
     return isOriginal ? ` <em class="source-chip">${escape(i18n.t("candidate.original"))}</em>` : "";
+  }
+
+  function descriptionActionButton(candidate) {
+    const action = candidate.descriptionAction;
+    if (!action?.visible) {
+      return "";
+    }
+    const disabled = action.disabled ? " disabled" : "";
+    const title = action.title ? ` title="${escape(action.title)}"` : "";
+    return `<button class="inline-action" type="button" data-description-action="${escape(candidate.fullName)}"${disabled}${title}>${escape(action.label)}</button>`;
   }
 
   function escape(value) {

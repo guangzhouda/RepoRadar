@@ -2,7 +2,7 @@ import tempfile
 import unittest
 
 from app.services.cache import JsonFileCache
-from app.services.localization import PayloadLocalizer, normalize_display_language
+from app.services.localization import PayloadLocalizer, TextLocalizer, normalize_display_language
 
 
 class FakeProvider:
@@ -147,6 +147,44 @@ class PayloadLocalizerTests(unittest.TestCase):
 
         self.assertNotIn("description_i18n", payload["candidates"][0])
         self.assertEqual(payload["localization_status"], "not_needed")
+        self.assertEqual(provider.calls, [])
+
+    def test_text_localizer_translates_and_caches_one_description(self):
+        provider = FakeProvider('{"text":"一个开源仓库发现工具。"}')
+
+        with tempfile.TemporaryDirectory() as cache_dir:
+            cache = JsonFileCache(cache_dir)
+            first = TextLocalizer(provider, cache, model_id="test-model").localize_text(
+                "An open source repository discovery tool.",
+                "zh",
+                scope="candidate_description",
+            )
+            second = TextLocalizer(provider, cache, model_id="test-model").localize_text(
+                "An open source repository discovery tool.",
+                "zh",
+                scope="candidate_description",
+            )
+
+        self.assertEqual(first["text"], "一个开源仓库发现工具。")
+        self.assertEqual(first["status"], "translated")
+        self.assertFalse(first["cached"])
+        self.assertEqual(second["text"], "一个开源仓库发现工具。")
+        self.assertTrue(second["cached"])
+        self.assertEqual(len(provider.calls), 1)
+
+    def test_text_localizer_skips_text_already_in_target_language(self):
+        provider = FakeProvider('{"text":"unused"}')
+
+        with tempfile.TemporaryDirectory() as cache_dir:
+            result = TextLocalizer(provider, JsonFileCache(cache_dir), model_id="test-model").localize_text(
+                "中文描述",
+                "zh",
+                scope="candidate_description",
+            )
+
+        self.assertEqual(result["text"], "中文描述")
+        self.assertEqual(result["status"], "not_needed")
+        self.assertFalse(result["cached"])
         self.assertEqual(provider.calls, [])
 
 

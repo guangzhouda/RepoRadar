@@ -28,9 +28,22 @@
     return response.json();
   }
 
+  function localizeText(text, targetLanguage, signal) {
+    return requestJson(
+      "/api/localize",
+      {
+        text,
+        target_language: targetLanguage,
+        scope: "candidate_description",
+      },
+      signal,
+    );
+  }
+
   global.RepoRadarApi = {
     checkHealth,
     isApiMode,
+    localizeText,
     requestJson,
   };
 })(window);
