@@ -22,6 +22,15 @@ class FrontendAssetTests(unittest.TestCase):
         for script in expected:
             self.assertTrue((root / "frontend" / script).is_file(), script)
 
+    def test_run_title_is_dynamic_not_i18n_literal(self):
+        root = Path(__file__).resolve().parents[1]
+        index = (root / "frontend" / "index.html").read_text(encoding="utf-8")
+        app = (root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="run-title"', index)
+        self.assertNotIn('data-i18n="status.runningAnalysisTitle"', index)
+        self.assertIn("runTitle.textContent = currentIdeaTitle();", app)
+
 
 if __name__ == "__main__":
     unittest.main()

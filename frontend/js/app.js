@@ -21,6 +21,7 @@
   const reportGeneratedAt = document.querySelector("#report-generated-at");
   const reportRunId = document.querySelector("#report-run-id");
   const languageSelect = document.querySelector("#display-language");
+  const runTitle = document.querySelector("#run-title");
 
   let currentPayload = formatters.clonePayload(sample.samplePayload);
   let currentCandidates = formatters.normalizeCandidates(currentPayload);
@@ -61,6 +62,7 @@
     runLayout.hidden = false;
     resultsLayout.hidden = true;
     runLog.innerHTML = "";
+    runTitle.textContent = currentIdeaTitle();
     if (api.isApiMode()) {
       runLiveAnalysis();
     } else {
@@ -88,7 +90,7 @@
     });
     global.setTimeout(() => {
       currentPayload = formatters.clonePayload(sample.samplePayload);
-      currentPayload.idea = document.querySelector("#idea-input").value.trim() || sample.sampleIdeas[i18n.getLanguage()];
+      currentPayload.idea = currentIdeaTitle();
       currentCandidates = formatters.normalizeCandidates(currentPayload);
       selectedCandidate = currentCandidates[0];
       backendMarkdown = "";
@@ -135,7 +137,7 @@
 
   function buildAnalyzeRequest() {
     return {
-      idea: document.querySelector("#idea-input").value.trim(),
+      idea: currentIdeaTitle(),
       max_repos: formatters.numberValue("#max-repos", 3),
       max_queries: 6,
       query_mode: document.querySelector("#query-mode").value,
@@ -156,6 +158,10 @@
     runLog.appendChild(line);
   }
 
+  function currentIdeaTitle() {
+    return document.querySelector("#idea-input").value.trim() || sample.sampleIdeas[i18n.getLanguage()];
+  }
+
   function renderTable() {
     candidateViews.renderTable(currentCandidates, selectedCandidate?.fullName || "", currentFilter, selectCandidate);
   }
@@ -171,7 +177,7 @@
   }
 
   function renderReport() {
-    const idea = currentPayload.idea || document.querySelector("#idea-input").value.trim() || sample.sampleIdeas[i18n.getLanguage()];
+    const idea = currentPayload.idea || currentIdeaTitle();
     const locale = i18n.getLanguage() === "zh" ? "zh-CN" : "en-US";
     reportGeneratedAt.textContent = new Date().toLocaleString(locale);
     reportRunId.textContent = api.isApiMode() ? `run_${Date.now()}` : "demo";
