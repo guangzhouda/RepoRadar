@@ -22,7 +22,10 @@ from typing import Any, Callable
 from urllib.parse import unquote, urlparse
 
 from app.core.config import Settings, load_settings
+from app.providers.openai_provider import LLMProviderError, OpenAIProvider
+from app.services.cache import JsonFileCache
 from app.services.idea_analysis import IdeaAnalysisOptions, IdeaAnalysisService
+from app.services.localization import PayloadLocalizer, normalize_display_language
 from app.services.report_generator import ReportGenerator
 from app.services.report_payload import build_report_from_payload
 
@@ -102,7 +105,9 @@ def _make_handler(frontend_dir: Path, settings_factory: SettingsFactory) -> type
                 card_limit=_int_option(body, "card_limit", 1, minimum=0, maximum=20),
                 card_decision=_choice_option(body, "card_decision", "keep", {"keep", "all"}),
             )
-            payload = IdeaAnalysisService(settings_factory()).analyze(options)
+            settings = settings_factory()
+            payload = IdeaAnalysisService(settings).analyze(options)
+            _localize_for_display(payload, settings, body)
             self._write_json({"ok": "error" not in payload, "payload": payload, "error": payload.get("error", "")})
 
         def _handle_report(self, body: dict[str, Any]) -> None:
@@ -168,6 +173,25 @@ def _health_payload(settings: Settings) -> dict[str, Any]:
         "cache_dir": settings.cache_dir,
         "log_level": settings.log_level,
     }
+
+
+def _localize_for_display(payload: dict[str, Any], settings: Settings, body: dict[str, Any]) -> None:
+    language = normalize_display_language(str(body.get("display_language") or ""))
+    if language is None or "error" in payload:
+        return
+    if not (settings.llm_api_key and settings.llm_base_url and settings.llm_model):
+        return
+
+    provider = OpenAIProvider(
+        api_key=settings.llm_api_key,
+        base_url=settings.llm_base_url,
+        model=settings.llm_model,
+    )
+    localizer = PayloadLocalizer(provider, cache=JsonFileCache(settings.cache_dir), model_id=settings.llm_model)
+    try:
+        localizer.localize_payload(payload, language)
+    except (LLMProviderError, ValueError) as exc:
+        payload["localization_error"] = str(exc)
 
 
 def _int_option(data: dict[str, Any], key: str, default: int, minimum: int, maximum: int) -> int:

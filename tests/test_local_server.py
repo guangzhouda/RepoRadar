@@ -69,6 +69,7 @@ class LocalServerTests(unittest.TestCase):
                 "review_mode": "none",
                 "extract_cards": True,
                 "card_limit": 1,
+                "display_language": "zh",
             },
         )
 
@@ -76,6 +77,7 @@ class LocalServerTests(unittest.TestCase):
         self.assertEqual(payload["payload"]["review_mode"], "none")
         self.assertEqual(payload["payload"]["card_limit"], 0)
         self.assertIn("queries", payload["payload"])
+        self.assertNotIn("localization_error", payload["payload"])
 
     def test_report_endpoint_returns_markdown(self):
         payload = self._post_json(
