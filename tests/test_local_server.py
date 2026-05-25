@@ -77,6 +77,8 @@ class LocalServerTests(unittest.TestCase):
         self.assertEqual(payload["payload"]["review_mode"], "none")
         self.assertEqual(payload["payload"]["card_limit"], 0)
         self.assertIn("queries", payload["payload"])
+        self.assertEqual(payload["payload"]["display_language"], "zh")
+        self.assertEqual(payload["payload"]["localization_status"], "skipped_llm_not_configured")
         self.assertNotIn("localization_error", payload["payload"])
 
     def test_report_endpoint_returns_markdown(self):

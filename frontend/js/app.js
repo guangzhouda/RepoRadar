@@ -114,6 +114,7 @@
       currentCandidates = formatters.normalizeCandidates(currentPayload);
       selectedCandidate = currentCandidates[0];
       appendLog(i18n.t("log.analysisComplete", { count: currentCandidates.length }));
+      appendLocalizationStatus(currentPayload);
 
       appendLog(i18n.t("log.callReport"));
       const reportResponse = await api.requestJson("/api/report", { payload: currentPayload }, activeController.signal);
@@ -156,6 +157,20 @@
     const locale = i18n.getLanguage() === "zh" ? "zh-CN" : "en-US";
     line.textContent = `[${new Date().toLocaleTimeString(locale)}] ${message}`;
     runLog.appendChild(line);
+  }
+
+  function appendLocalizationStatus(payload) {
+    if (payload.localization_error) {
+      appendLog(i18n.t("log.localizationFailed", { message: payload.localization_error }));
+      return;
+    }
+    if (payload.localization_status === "translated") {
+      appendLog(i18n.t("log.localizationComplete"));
+      return;
+    }
+    if (payload.localization_status === "skipped_llm_not_configured") {
+      appendLog(i18n.t("log.localizationSkipped", { reason: i18n.t("status.llmIncomplete") }));
+    }
   }
 
   function currentIdeaTitle() {

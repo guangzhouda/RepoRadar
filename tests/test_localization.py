@@ -53,7 +53,52 @@ class PayloadLocalizerTests(unittest.TestCase):
         self.assertEqual(candidate["description_i18n"]["zh"], "开源仓库精选列表。")
         self.assertEqual(candidate["rationale_i18n"]["zh"], "匹配开源发现需求。")
         self.assertEqual(candidate["description"], "A curated list of open source repositories.")
+        self.assertEqual(localized["localization_status"], "translated")
         self.assertEqual(len(provider.calls), 1)
+
+    def test_localize_payload_adds_skill_card_i18n_fields(self):
+        payload = {
+            "candidates": [
+                {
+                    "full_name": "owner/repo",
+                    "description": "A curated list of open source repositories.",
+                    "skill_card": {
+                        "repo": "owner/repo",
+                        "summary": "Finds reusable open source repositories.",
+                        "categories": ["repository discovery", "reuse analysis"],
+                        "core_capabilities": ["search GitHub candidates", "compare implementation signals"],
+                        "input_formats": ["GitHub repository"],
+                    },
+                }
+            ]
+        }
+        provider = FakeProvider(
+            """
+            {
+              "items": [
+                {
+                  "full_name": "owner/repo",
+                  "description": "开源仓库精选列表。",
+                  "skill_card": {
+                    "summary": "发现可复用的开源仓库。",
+                    "categories": ["仓库发现", "复用分析"],
+                    "core_capabilities": ["搜索 GitHub 候选仓库", "比较实现信号"]
+                  }
+                }
+              ]
+            }
+            """
+        )
+
+        with tempfile.TemporaryDirectory() as cache_dir:
+            localizer = PayloadLocalizer(provider, JsonFileCache(cache_dir), model_id="test-model")
+            localized = localizer.localize_payload(payload, "zh")
+
+        card = localized["candidates"][0]["skill_card"]
+        self.assertEqual(card["summary_i18n"]["zh"], "发现可复用的开源仓库。")
+        self.assertEqual(card["categories_i18n"]["zh"], ["仓库发现", "复用分析"])
+        self.assertEqual(card["core_capabilities_i18n"]["zh"], ["搜索 GitHub 候选仓库", "比较实现信号"])
+        self.assertNotIn("input_formats_i18n", card)
 
     def test_localize_payload_uses_cache_for_same_texts(self):
         payload = {
@@ -101,6 +146,7 @@ class PayloadLocalizerTests(unittest.TestCase):
             PayloadLocalizer(provider, JsonFileCache(cache_dir), model_id="test-model").localize_payload(payload, "zh")
 
         self.assertNotIn("description_i18n", payload["candidates"][0])
+        self.assertEqual(payload["localization_status"], "not_needed")
         self.assertEqual(provider.calls, [])
 
 

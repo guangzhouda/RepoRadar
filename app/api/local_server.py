@@ -179,7 +179,9 @@ def _localize_for_display(payload: dict[str, Any], settings: Settings, body: dic
     language = normalize_display_language(str(body.get("display_language") or ""))
     if language is None or "error" in payload:
         return
+    payload["display_language"] = language
     if not (settings.llm_api_key and settings.llm_base_url and settings.llm_model):
+        payload["localization_status"] = "skipped_llm_not_configured"
         return
 
     provider = OpenAIProvider(
@@ -191,6 +193,7 @@ def _localize_for_display(payload: dict[str, Any], settings: Settings, body: dic
     try:
         localizer.localize_payload(payload, language)
     except (LLMProviderError, ValueError) as exc:
+        payload["localization_status"] = "error"
         payload["localization_error"] = str(exc)
 
 
