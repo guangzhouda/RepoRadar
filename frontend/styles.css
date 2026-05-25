@@ -96,6 +96,13 @@ button {
   gap: 18px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: 18px;
+}
+
 .nav-link {
   min-width: 64px;
   border: 0;
@@ -108,6 +115,20 @@ button {
 .nav-link.is-active {
   border-color: var(--primary);
   color: var(--primary);
+}
+
+.language-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #44516b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.language-control select {
+  width: 116px;
+  height: 34px;
 }
 
 .view {
@@ -532,6 +553,20 @@ select:focus {
   line-height: 1.45;
 }
 
+.source-chip {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  margin-left: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 6px;
+  color: #61708a;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
 .summary-panel {
   position: sticky;
   top: 76px;
@@ -787,6 +822,15 @@ code {
   margin-bottom: 10px;
 }
 
+.report-note {
+  border: 1px solid #cce9ec;
+  border-radius: 6px;
+  background: var(--primary-soft);
+  padding: 10px 12px;
+  color: #2e6670;
+  line-height: 1.5;
+}
+
 .recommendation {
   border: 1px solid #91d5db;
   border-radius: 6px;
@@ -860,6 +904,22 @@ code {
   .topnav {
     width: 100%;
     gap: 8px;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    align-self: auto;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .language-control {
+    justify-content: space-between;
+  }
+
+  .language-control select {
+    max-width: 160px;
   }
 
   .nav-link {

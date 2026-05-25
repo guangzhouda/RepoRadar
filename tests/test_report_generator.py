@@ -122,6 +122,46 @@ class ReportGeneratorTests(unittest.TestCase):
 
         self.assertIn("Skill card error: LLM request timed out", markdown)
 
+    def test_generate_markdown_summarizes_candidates_without_skill_cards(self):
+        carded = RepositoryCandidate(
+            full_name="owner/carded",
+            url="https://github.com/owner/carded",
+            license="MIT",
+            pushed_at="2026-05-01T00:00:00Z",
+        )
+        missing = RepositoryCandidate(
+            full_name="owner/missing",
+            url="https://github.com/owner/missing",
+            license="MIT",
+            pushed_at="2026-05-01T00:00:00Z",
+        )
+        report = ResearchReport(
+            idea="Build an EPUB to audiobook tool",
+            candidates=(carded, missing),
+            skill_cards=(
+                RepoSkillCard(
+                    repo="owner/carded",
+                    name="carded",
+                    summary="Converts ebooks into narrated audio.",
+                    input_formats=("EPUB",),
+                    output_formats=("MP3",),
+                    interfaces=("cli",),
+                    core_capabilities=("ebook to audio",),
+                    confidence=0.8,
+                ),
+            ),
+            assessments=(
+                CandidateAssessment(full_name="owner/carded", relevance_score=0.9, decision="keep"),
+                CandidateAssessment(full_name="owner/missing", relevance_score=0.8, decision="keep"),
+            ),
+        )
+
+        markdown = ReportGenerator(ScoringEngine(today=date(2026, 5, 24))).generate_markdown(report)
+
+        self.assertIn("Skill card not generated for: owner/missing.", markdown)
+        self.assertNotIn("| owner/missing | unknown | unknown | unknown | unknown |", markdown)
+        self.assertNotIn("| owner/missing | unknown | unknown | unknown | skill card missing |", markdown)
+
 
 if __name__ == "__main__":
     unittest.main()

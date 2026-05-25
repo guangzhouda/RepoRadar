@@ -124,18 +124,21 @@ def _skill_card_sections(
     assessments: dict[str, CandidateAssessment],
 ) -> list[str]:
     lines: list[str] = []
-    for candidate, score in scored_candidates[:3]:
-        card = skill_cards.get(candidate.full_name)
+    candidates_with_cards = [
+        (candidate, score, skill_cards[candidate.full_name])
+        for candidate, score in scored_candidates
+        if candidate.full_name in skill_cards
+    ]
+    missing_candidates = [candidate for candidate, _score in scored_candidates if candidate.full_name not in skill_cards]
+
+    if not candidates_with_cards:
+        lines.append("No skill cards were generated for this analysis.")
+        lines.extend(_missing_skill_card_lines(missing_candidates, assessments))
+        return lines
+
+    for candidate, score, card in candidates_with_cards[:3]:
         lines.append(f"### {_cell(candidate.full_name)}")
         lines.append("")
-        if card is None:
-            lines.append("No skill card was generated for this repository.")
-            assessment = assessments.get(candidate.full_name)
-            if assessment and assessment.skill_card_error:
-                lines.append(f"Skill card error: {_cell(assessment.skill_card_error)}")
-            lines.append("")
-            continue
-
         lines.append(card.summary or "No summary available.")
         lines.append("")
         lines.append(f"- Score: `{score.overall:.3f}`")
@@ -159,6 +162,7 @@ def _skill_card_sections(
             quote = _truncate(evidence.quote, 160)
             lines.append(f"- Evidence: `{evidence.source}` - \"{_cell(quote)}\"")
         lines.append("")
+    lines.extend(_missing_skill_card_lines(missing_candidates, assessments))
     return lines
 
 
@@ -166,15 +170,25 @@ def _capability_table(
     scored_candidates: list[tuple[RepositoryCandidate, ScoreBreakdown]],
     skill_cards: dict[str, RepoSkillCard],
 ) -> list[str]:
+    candidates_with_cards = [
+        (candidate, score)
+        for candidate, score in scored_candidates
+        if candidate.full_name in skill_cards
+    ]
+    missing_candidates = [candidate for candidate, _score in scored_candidates if candidate.full_name not in skill_cards]
+
+    if not candidates_with_cards:
+        return [
+            "No generated skill cards are available for capability comparison.",
+            *_missing_skill_card_lines(missing_candidates, {}),
+        ]
+
     lines = [
         "| Repo | Inputs | Outputs | Interfaces | Core Capabilities | Limitations |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
-    for candidate, _score in scored_candidates:
-        card = skill_cards.get(candidate.full_name)
-        if card is None:
-            lines.append(f"| {_cell(candidate.full_name)} | unknown | unknown | unknown | unknown | skill card missing |")
-            continue
+    for candidate, _score in candidates_with_cards:
+        card = skill_cards[candidate.full_name]
         lines.append(
             " | ".join(
                 [
@@ -187,6 +201,7 @@ def _capability_table(
                 ]
             )
         )
+    lines.extend(["", *_missing_skill_card_lines(missing_candidates, {})])
     return lines
 
 
@@ -194,15 +209,25 @@ def _implementation_table(
     scored_candidates: list[tuple[RepositoryCandidate, ScoreBreakdown]],
     skill_cards: dict[str, RepoSkillCard],
 ) -> list[str]:
+    candidates_with_cards = [
+        (candidate, score)
+        for candidate, score in scored_candidates
+        if candidate.full_name in skill_cards
+    ]
+    missing_candidates = [candidate for candidate, _score in scored_candidates if candidate.full_name not in skill_cards]
+
+    if not candidates_with_cards:
+        return [
+            "No generated skill cards are available for implementation signals.",
+            *_missing_skill_card_lines(missing_candidates, {}),
+        ]
+
     lines = [
         "| Repo | Model Providers | Deployment | Suitable For | Not Supported |",
         "| --- | --- | --- | --- | --- |",
     ]
-    for candidate, _score in scored_candidates:
-        card = skill_cards.get(candidate.full_name)
-        if card is None:
-            lines.append(f"| {_cell(candidate.full_name)} | unknown | unknown | unknown | skill card missing |")
-            continue
+    for candidate, _score in candidates_with_cards:
+        card = skill_cards[candidate.full_name]
         lines.append(
             " | ".join(
                 [
@@ -214,14 +239,32 @@ def _implementation_table(
                 ]
             )
         )
+    lines.extend(["", *_missing_skill_card_lines(missing_candidates, {})])
     return lines
 
 
 def _join_or_unknown(items: tuple[str, ...], limit: int = 5) -> str:
     values = [item for item in items if item]
     if not values:
-        return "unknown"
+        return "not extracted"
     return ", ".join(values[:limit])
+
+
+def _missing_skill_card_lines(
+    candidates: list[RepositoryCandidate],
+    assessments: dict[str, CandidateAssessment],
+) -> list[str]:
+    if not candidates:
+        return []
+
+    names = ", ".join(_cell(candidate.full_name) for candidate in candidates)
+    lines = ["", f"Skill card not generated for: {names}."]
+    for candidate in candidates:
+        assessment = assessments.get(candidate.full_name)
+        if assessment and assessment.skill_card_error:
+            lines.append(f"Skill card error: {_cell(assessment.skill_card_error)}")
+    lines.append("")
+    return lines
 
 
 def _review_note(assessment: CandidateAssessment | None) -> str:
